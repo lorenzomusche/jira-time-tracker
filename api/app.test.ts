@@ -19,6 +19,8 @@ const JIRA_ISSUES = [
       project: { key: "PRJ", name: "Progetto Demo" },
       issuetype: { name: "Story" },
       priority: { name: "High" },
+      labels: ["backend", "urgent"],
+      assignee: { accountId: "acc-123", displayName: "Mario Rossi" },
       timeestimate: 28800,
       timespent: 3600,
       duedate: null,
@@ -74,7 +76,43 @@ function mockJiraFetch() {
       return jsonResponse({ issues: JIRA_ISSUES, total: JIRA_ISSUES.length });
     }
     if (url.includes("/rest/api/3/search/jql")) {
+      const jql = new URL(url).searchParams.get("jql") ?? "";
+      if (/key = EXT-9/i.test(jql)) {
+        return jsonResponse({
+          issues: [{
+            id: "99",
+            key: "EXT-9",
+            fields: {
+              summary: "Issue di un collega",
+              status: { name: "To Do", statusCategory: { name: "To Do" } },
+              project: { key: "EXT", name: "External" },
+              issuetype: { name: "Task" },
+              priority: { name: "Low" },
+              labels: ["imported"],
+              assignee: { accountId: "someone-else", displayName: "Luigi Verdi" },
+              timeestimate: null,
+              timespent: null,
+              duedate: null,
+              updated: "2026-07-20T08:00:00.000+0000",
+            },
+          }],
+          isLast: true,
+        });
+      }
+      if (/key = PRJ-1/i.test(jql)) {
+        const done = JSON.parse(JSON.stringify(JIRA_ISSUES[0]));
+        done.fields.status = { name: "Done", statusCategory: { name: "Done" } };
+        return jsonResponse({ issues: [done], isLast: true });
+      }
       return jsonResponse({ issues: JIRA_ISSUES, isLast: true });
+    }
+    if (url.includes("/transitions") && method === "GET") {
+      return jsonResponse({
+        transitions: [{ id: "31", name: "Done", to: { name: "Done" } }],
+      });
+    }
+    if (url.includes("/transitions") && method === "POST") {
+      return new Response(null, { status: 204 });
     }
     if (url.includes("/worklog") && method === "POST") {
       const body = JSON.parse(String(init?.body));
@@ -222,13 +260,62 @@ describe("app router (integration, in-memory SQLite)", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
+  it("stores labels and assignee on sync; filters by label", async () => {
+    const caller = router.createCaller(authedCtx);
+    const list = await caller.issues.list();
+    const prj1 = list.issues.find((i) => i.key === "PRJ-1");
+    expect(prj1?.labels).toEqual(["backend", "urgent"]);
+    expect(prj1?.isMine).toBe(true);
+    expect(list.labels).toEqual(["backend", "urgent"]);
+
+    const filtered = await caller.issues.list({ label: "urgent" });
+    expect(filtered.issues.map((i) => i.key)).toEqual(["PRJ-1"]);
+  });
+
+  it("imports an arbitrary issue by key (not assigned to me)", async () => {
+    const caller = router.createCaller(authedCtx);
+    const res = await caller.issues.import({ key: "EXT-9" });
+    expect(res.imported).toBe("EXT-9");
+    const list = await caller.issues.list();
+    const ext = list.issues.find((i) => i.key === "EXT-9");
+    expect(ext?.isMine).toBe(false);
+    expect(ext?.labels).toEqual(["imported"]);
+  });
+
+  it("global search flags imported and ownership", async () => {
+    const caller = router.createCaller(authedCtx);
+    const results = await caller.issues.search({ query: "EXT-9" });
+    expect(results).toHaveLength(1);
+    expect(results[0].imported).toBe(true);
+    expect(results[0].isMine).toBe(false);
+  });
+
+  it("cleanup deletes only issues without tracked worklogs", async () => {
+    const caller = router.createCaller(authedCtx);
+    // PRJ-1 has a worklog (created in a previous test), OPS-7 and EXT-9 do not
+    const res = await caller.issues.cleanup();
+    expect(res.deleted).toBe(2);
+    expect(res.kept).toBe(1);
+    const list = await caller.issues.list();
+    expect(list.issues.map((i) => i.key)).toEqual(["PRJ-1"]);
+  });
+
+  it("transitions an issue to a new status and refreshes it locally", async () => {
+    const caller = router.createCaller(authedCtx);
+    const res = await caller.issues.transition({ key: "PRJ-1", toStatus: "Done" });
+    expect(res.to).toBe("Done");
+    const issue = await caller.issues.get({ key: "PRJ-1" });
+    expect(issue.status).toBe("Done");
+  });
+
   it("computes dashboard stats from local worklogs", async () => {
     const caller = router.createCaller(authedCtx);
     const stats = await caller.stats.dashboard();
     expect(stats.weekSeconds).toBe(9000);
     expect(stats.monthSeconds).toBe(9000);
-    expect(stats.issueCount).toBe(2);
-    expect(stats.openIssueCount).toBe(2);
+    // after cleanup: only PRJ-1 remains, and it was transitioned to Done
+    expect(stats.issueCount).toBe(1);
+    expect(stats.openIssueCount).toBe(0);
     expect(stats.perDay).toHaveLength(14);
     expect(stats.perDay.reduce((a, d) => a + d.seconds, 0)).toBe(9000);
     expect(stats.perProject[0].projectKey).toBe("PRJ");

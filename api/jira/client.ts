@@ -92,6 +92,8 @@ export type JiraSearchedIssue = {
     project?: { key?: string; name?: string };
     issuetype?: { name?: string };
     priority?: { name?: string };
+    labels?: string[];
+    assignee?: { accountId?: string; name?: string; displayName?: string } | null;
     timeestimate?: number | null;
     timespent?: number | null;
     duedate?: string | null;
@@ -156,21 +158,22 @@ export async function getMyself(creds: JiraCredentials): Promise<JiraMyself> {
 }
 
 const ISSUE_FIELDS =
-  "summary,status,project,issuetype,priority,timeestimate,timespent,duedate,updated";
+  "summary,status,project,issuetype,priority,labels,assignee,timeestimate,timespent,duedate,updated";
 
-/** Fetch all issues assigned to the current user (paginates automatically). */
-export async function fetchAssignedIssues(
+/** Generic JQL search with automatic pagination. */
+export async function searchIssues(
   creds: JiraCredentials,
+  jql: string,
+  maxTotal = 500,
 ): Promise<JiraSearchedIssue[]> {
   if (creds.deployment === "server") {
-    // Server/DC 8.x: classic /search endpoint with startAt pagination
     const out: JiraSearchedIssue[] = [];
     const pageSize = 100;
     let startAt = 0;
     let total = Infinity;
-    while (startAt < total) {
+    while (startAt < total && out.length < maxTotal) {
       const params = new URLSearchParams({
-        jql: "assignee = currentUser() ORDER BY updated DESC",
+        jql,
         fields: ISSUE_FIELDS,
         maxResults: String(pageSize),
         startAt: String(startAt),
@@ -184,15 +187,14 @@ export async function fetchAssignedIssues(
       startAt += pageSize;
       if ((page.issues ?? []).length === 0) break;
     }
-    return out;
+    return out.slice(0, maxTotal);
   }
 
-  // Cloud: /search/jql with nextPageToken pagination
   const out: JiraSearchedIssue[] = [];
   let nextPageToken: string | undefined;
   do {
     const params = new URLSearchParams({
-      jql: "assignee = currentUser() ORDER BY updated DESC",
+      jql,
       fields: ISSUE_FIELDS,
       maxResults: "100",
     });
@@ -204,9 +206,55 @@ export async function fetchAssignedIssues(
     }>(creds, `${apiBase(creds)}/search/jql?${params.toString()}`);
     out.push(...(page.issues ?? []));
     nextPageToken = page.isLast === false ? page.nextPageToken : undefined;
-  } while (nextPageToken);
-  return out;
+  } while (nextPageToken && out.length < maxTotal);
+  return out.slice(0, maxTotal);
 }
+
+/** Fetch all issues assigned to the current user (paginates automatically). */
+export async function fetchAssignedIssues(
+  creds: JiraCredentials,
+): Promise<JiraSearchedIssue[]> {
+  return searchIssues(creds, "assignee = currentUser() ORDER BY updated DESC", 10000);
+}
+
+/** Fetch a single issue by key (returns null when missing). */
+export async function fetchIssueByKey(
+  creds: JiraCredentials,
+  key: string,
+): Promise<JiraSearchedIssue | null> {
+  const res = await searchIssues(creds, `key = ${key}`, 1);
+  return res[0] ?? null;
+}
+
+export type JiraTransition = {
+  id: string;
+  name: string;
+  to?: { name?: string; statusCategory?: { name?: string } };
+};
+
+export async function fetchTransitions(
+  creds: JiraCredentials,
+  issueKey: string,
+): Promise<JiraTransition[]> {
+  const res = await jiraFetch<{ transitions?: JiraTransition[] }>(
+    creds,
+    `${apiBase(creds)}/issue/${encodeURIComponent(issueKey)}/transitions`,
+  );
+  return res.transitions ?? [];
+}
+
+export async function doTransition(
+  creds: JiraCredentials,
+  issueKey: string,
+  transitionId: string,
+): Promise<void> {
+  await jiraFetch<void>(
+    creds,
+    `${apiBase(creds)}/issue/${encodeURIComponent(issueKey)}/transitions`,
+    { method: "POST", body: JSON.stringify({ transition: { id: transitionId } }) },
+  );
+}
+
 
 export async function fetchWorklogs(
   creds: JiraCredentials,

@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router";
-import { Clock, LayoutDashboard, ListTodo, CalendarDays, LogOut, RefreshCw } from "lucide-react";
+import { Clock, LayoutDashboard, ListTodo, CalendarDays, KanbanSquare, LogOut, RefreshCw } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,6 +20,7 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/issues", label: "Issue", icon: ListTodo },
   { to: "/timesheet", label: "Timesheet", icon: CalendarDays },
+  { to: "/board", label: "Board", icon: KanbanSquare },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {

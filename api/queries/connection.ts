@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS issues (
   project_name TEXT NOT NULL,
   issue_type TEXT NOT NULL DEFAULT '',
   priority TEXT NOT NULL DEFAULT '',
+  labels TEXT NOT NULL DEFAULT '[]',
+  assignee_id TEXT NOT NULL DEFAULT '',
   time_estimate_seconds INTEGER,
   time_spent_seconds INTEGER,
   due_date TEXT,
@@ -99,6 +101,16 @@ function createDb() {
   }
   if (!colNames.has("auth_type")) {
     sqlite.exec("ALTER TABLE users ADD COLUMN auth_type TEXT NOT NULL DEFAULT 'basic'");
+  }
+  const issueCols = sqlite
+    .prepare("SELECT name FROM pragma_table_info('issues')")
+    .all() as { name: string }[];
+  const issueColNames = new Set(issueCols.map((c) => c.name));
+  if (!issueColNames.has("labels")) {
+    sqlite.exec("ALTER TABLE issues ADD COLUMN labels TEXT NOT NULL DEFAULT '[]'");
+  }
+  if (!issueColNames.has("assignee_id")) {
+    sqlite.exec("ALTER TABLE issues ADD COLUMN assignee_id TEXT NOT NULL DEFAULT ''");
   }
   return drizzle(sqlite, { schema: fullSchema });
 }

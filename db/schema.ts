@@ -55,6 +55,10 @@ export const issues = sqliteTable(
     projectName: text("project_name").notNull(),
     issueType: text("issue_type").notNull().default(""),
     priority: text("priority").notNull().default(""),
+    /** Jira labels, as JSON string array */
+    labels: text("labels").notNull().default("[]"),
+    /** Assignee accountId (Cloud) or username (Server/DC) */
+    assigneeId: text("assignee_id").notNull().default(""),
     timeEstimateSeconds: integer("time_estimate_seconds"),
     timeSpentSeconds: integer("time_spent_seconds"),
     dueDate: text("due_date"),

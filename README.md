@@ -7,7 +7,11 @@ Applicazione web full-stack per **catalogare le issue Jira assegnate** all'utent
 ## Funzionalità
 
 - **Login con credenziali Jira Cloud** (sito, email, API token) — il token è cifrato (AES-256-GCM) e salvato solo nel database locale
-- **Catalogo issue assegnate**: sync da Jira (`assignee = currentUser()`), ricerca full-text, filtri per stato e progetto, link diretto a Jira
+- **Catalogo issue assegnate**: sync da Jira (`assignee = currentUser()`), ricerca full-text, filtri per stato/progetto/label, ordinamento per priorità o label, link diretto a Jira
+- **Ricerca globale Jira**: cerca qualsiasi issue (anche non tua) per chiave o testo e importala nel catalogo solo se ti serve
+- **Pulizia catalogo**: un click elimina le issue locali senza storico di tracking (su Jira non cambia nulla)
+- **Label Jira**: sincronizzate e mostrate come badge, filtrabili e ordinabili
+- **Kanban board**: colonne per stato con drag & drop nativo — spostare una card esegue la transizione di stato direttamente su Jira
 - **Consuntivazione rapida dalla dashboard**: cerca l'issue (ricerca nativa), tocca un preset di durata (15m/30m/1h/2h/4h/1d), invia — fatto. La data di inizio è calcolata automaticamente come "ora meno durata"
 - **Duplica giornata**: dalla timesheet copi tutti i worklog di un giorno su oggi con un click
 - **Fine tracking con timer live**: play / pausa / stop su ogni issue — allo stop il tempo tracciato (arrotondato al minuto) viene pre-caricato nel dialog di consuntivazione. Un solo timer attivo alla volta: avviandone uno gli altri vanno in pausa automaticamente. Badge sempre visibile nell'header
@@ -79,7 +83,7 @@ src/            React: Login, Dashboard, Issues, IssueDetail, Timesheet
 
 ## Test
 
-38 test: parsing/formatting durate, crypto, client Jira (fetch mockato, paginazione JQL, errori) e integrazione end-to-end dei router tRPC su SQLite in-memory (login, sync issue, worklog CRUD, statistiche, logout).
+46 test: parsing/formatting durate, crypto, client Jira (fetch mockato, paginazione JQL, errori) e integrazione end-to-end dei router tRPC su SQLite in-memory (login, sync issue, worklog CRUD, statistiche, logout).
 
 ## Note di sicurezza
 
