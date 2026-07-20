@@ -691,6 +691,101 @@ describe("app router (integration, in-memory SQLite)", () => {
     });
   });
 
+  describe("approvals (weekly workflow)", () => {
+    it("locks edits on submit, unlocks on reject, locks on approve", async () => {
+      const caller = router.createCaller(authedCtx);
+      const { weekStartKey } = await import("@contracts/time");
+      const inWeek = new Date("2026-06-03T10:00:00Z");
+
+      // worklog created while the week is open
+      const wl = await caller.worklogs.create({
+        issueKey: "PRJ-1",
+        timeSpent: "1h",
+        started: inWeek.toISOString(),
+        comment: "pre-lock",
+      });
+
+      // cannot approve a week that was never submitted
+      await expect(
+        caller.approvals.approve({ week: inWeek.toISOString() }),
+      ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+
+      // submit → locked
+      const sub = await caller.approvals.submit({ week: inWeek.toISOString() });
+      expect(sub.status).toBe("submitted");
+      expect(sub.weekStart).toBe(weekStartKey(inWeek));
+
+      await expect(
+        caller.worklogs.create({
+          issueKey: "PRJ-1",
+          timeSpent: "30m",
+          started: inWeek.toISOString(),
+          comment: "x",
+        }),
+      ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+      await expect(
+        caller.worklogs.update({
+          issueKey: "PRJ-1",
+          jiraWorklogId: wl.jiraWorklogId,
+          timeSpent: "2h",
+          started: inWeek.toISOString(),
+          comment: "y",
+        }),
+      ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+      await expect(
+        caller.worklogs.delete({ issueKey: "PRJ-1", jiraWorklogId: wl.jiraWorklogId }),
+      ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+
+      // a different week stays editable
+      const other = await caller.worklogs.create({
+        issueKey: "PRJ-1",
+        timeSpent: "15m",
+        started: new Date("2026-05-20T10:00:00Z").toISOString(),
+        comment: "altra settimana",
+      });
+      expect(other.jiraWorklogId).toBe("wl-1");
+
+      // double submit rejected
+      await expect(
+        caller.approvals.submit({ week: inWeek.toISOString() }),
+      ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+
+      // reject with a note → week editable again
+      const rej = await caller.approvals.reject({
+        week: inWeek.toISOString(),
+        note: "manca martedì",
+      });
+      expect(rej.status).toBe("rejected");
+      expect(rej.note).toBe("manca martedì");
+      await caller.worklogs.delete({ issueKey: "PRJ-1", jiraWorklogId: wl.jiraWorklogId });
+
+      // resubmit → approve → final lock
+      await caller.approvals.submit({ week: inWeek.toISOString() });
+      const app = await caller.approvals.approve({ week: inWeek.toISOString() });
+      expect(app.status).toBe("approved");
+      await expect(
+        caller.worklogs.create({
+          issueKey: "PRJ-1",
+          timeSpent: "30m",
+          started: inWeek.toISOString(),
+          comment: "z",
+        }),
+      ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+      await expect(
+        caller.approvals.submit({ week: inWeek.toISOString() }),
+      ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+
+      const fw = await caller.approvals.forWeek({ week: inWeek.toISOString() });
+      expect(fw?.status).toBe("approved");
+      const list = await caller.approvals.list();
+      expect(
+        list.some(
+          (a) => a.weekStart === weekStartKey(inWeek) && a.status === "approved",
+        ),
+      ).toBe(true);
+    });
+  });
+
   it("logs out and invalidates the session row", async () => {
     const caller = router.createCaller(authedCtx);
     await caller.auth.logout();

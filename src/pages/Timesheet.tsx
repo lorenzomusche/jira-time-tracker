@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { ChevronLeft, ChevronRight, CopyPlus, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, CopyPlus, Download, Lock, Send, ShieldCheck, ShieldX } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { formatSeconds } from "@contracts/time";
 import { Button } from "@/components/ui/button";
@@ -168,6 +168,41 @@ export default function Timesheet() {
   const [duplicating, setDuplicating] = useState(false);
   const create = trpc.worklogs.create.useMutation();
 
+  // --- weekly approval workflow ---
+  const approval = trpc.approvals.forWeek.useQuery({ week: weekStart.toISOString() });
+  const weekLocked =
+    approval.data?.status === "submitted" || approval.data?.status === "approved";
+  const invalidateApproval = () => {
+    utils.approvals.forWeek.invalidate();
+    utils.approvals.list.invalidate();
+  };
+  const submitMut = trpc.approvals.submit.useMutation({
+    onSuccess: () => {
+      invalidateApproval();
+      toast.success("Settimana inviata per approvazione: modifiche bloccate");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const approveMut = trpc.approvals.approve.useMutation({
+    onSuccess: () => {
+      invalidateApproval();
+      toast.success("Settimana approvata");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const rejectMut = trpc.approvals.reject.useMutation({
+    onSuccess: () => {
+      invalidateApproval();
+      toast.success("Settimana rifiutata: modifiche sbloccate");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const onSubmitWeek = () => submitMut.mutate({ week: weekStart.toISOString() });
+  const onRejectWeek = () => {
+    const note = window.prompt("Motivo del rifiuto (opzionale):") ?? "";
+    rejectMut.mutate({ week: weekStart.toISOString(), note });
+  };
+
   /** Duplicate all worklogs of a day onto today (same issues, durations, comments). */
   const duplicateDay = async (
     entries: { issueKey: string; timeSpentSeconds: number; comment: string }[],
@@ -268,8 +303,68 @@ export default function Timesheet() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {view === "week" && (
+            <div className="flex items-center gap-2">
+              {approval.data?.status === "approved" ? (
+                <span className="flex items-center gap-1 rounded-full bg-[hsl(var(--success)/0.15)] px-2.5 py-1 text-xs font-medium text-[hsl(var(--success))]">
+                  <Lock className="h-3 w-3" /> Approvata
+                </span>
+              ) : approval.data?.status === "submitted" ? (
+                <>
+                  <span className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                    <Lock className="h-3 w-3" /> In attesa
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 rounded-full text-xs"
+                    onClick={() => approveMut.mutate({ week: weekStart.toISOString() })}
+                    disabled={approveMut.isPending}
+                  >
+                    <ShieldCheck className="mr-1 h-3.5 w-3.5" /> Approva
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 rounded-full text-xs text-destructive"
+                    onClick={onRejectWeek}
+                    disabled={rejectMut.isPending}
+                  >
+                    <ShieldX className="mr-1 h-3.5 w-3.5" /> Rifiuta
+                  </Button>
+                </>
+              ) : approval.data?.status === "rejected" ? (
+                <>
+                  <span
+                    className="rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive"
+                    title={approval.data.note || undefined}
+                  >
+                    Rifiutata{approval.data.note ? `: ${approval.data.note}` : ""}
+                  </span>
+                  <Button
+                    size="sm"
+                    className="h-7 rounded-full text-xs"
+                    onClick={onSubmitWeek}
+                    disabled={submitMut.isPending}
+                  >
+                    <Send className="mr-1 h-3.5 w-3.5" /> Invia di nuovo
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 rounded-full text-xs"
+                  onClick={onSubmitWeek}
+                  disabled={submitMut.isPending}
+                >
+                  <Send className="mr-1 h-3.5 w-3.5" /> Invia per approvazione
+                </Button>
+              )}
+            </div>
+          )}
           {selected.size > 0 && (
-            <Button variant="destructive" size="sm" onClick={deleteSelected} disabled={del.isPending}>
+            <Button variant="destructive" size="sm" onClick={deleteSelected} disabled={del.isPending || weekLocked}>
               <Trash2 className="mr-1.5 h-4 w-4" />
               Elimina {selected.size}
             </Button>
@@ -384,7 +479,7 @@ export default function Timesheet() {
                       </span>
                     </span>
                     <span className="flex items-center gap-1">
-                      {!isToday && d.entries.length > 0 && (
+                      {!isToday && d.entries.length > 0 && !weekLocked && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -416,11 +511,13 @@ export default function Timesheet() {
                   ) : (
                     d.entries.map((w) => (
                       <div key={w.id} className="flex items-start gap-1.5">
-                        <Checkbox
-                          className="mt-2"
-                          checked={selected.has(w.id)}
-                          onCheckedChange={() => toggleSelect(w.id)}
-                        />
+                        {!weekLocked && (
+                          <Checkbox
+                            className="mt-2"
+                            checked={selected.has(w.id)}
+                            onCheckedChange={() => toggleSelect(w.id)}
+                          />
+                        )}
                         <Link
                           to={`/issues/${w.issueKey}`}
                           className="flex-1 rounded-md border p-2 text-xs transition-colors hover:bg-accent"

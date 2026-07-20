@@ -7,6 +7,7 @@ import { timersRouter } from "./routers/timers";
 import { settingsRouter } from "./routers/settings";
 import { reportsRouter } from "./routers/reports";
 import { outboxRouter } from "./routers/outbox";
+import { approvalsRouter } from "./routers/approvals";
 
 export const appRouter = createRouter({
   ping: publicQuery.query(() => ({ ok: true, ts: Date.now() })),
@@ -18,6 +19,7 @@ export const appRouter = createRouter({
   settings: settingsRouter,
   reports: reportsRouter,
   outbox: outboxRouter,
+  approvals: approvalsRouter,
 });
 
 export type AppRouter = typeof appRouter;

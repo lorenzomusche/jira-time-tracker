@@ -65,3 +65,12 @@ export function toJiraStarted(date: Date): string {
     `${sign}${pad(Math.floor(abs / 60))}${pad(abs % 60)}`
   );
 }
+
+/** Monday (local time) of the week containing `date`, as "YYYY-MM-DD". */
+export function weekStartKey(date: Date): string {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = (d.getDay() + 6) % 7; // Monday = 0
+  d.setDate(d.getDate() - day);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}

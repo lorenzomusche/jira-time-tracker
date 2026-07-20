@@ -175,6 +175,33 @@ export const outbox = sqliteTable(
   (t) => [index("idx_outbox_user").on(t.userId)],
 );
 
+/**
+ * Weekly timesheet approvals. One row per user/week.
+ * status: "submitted" | "approved" | "rejected"
+ * Weeks in "submitted"/"approved" state are locked against edits.
+ */
+export const approvals = sqliteTable(
+  "approvals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Monday of the week, "YYYY-MM-DD" */
+    weekStart: text("week_start").notNull(),
+    status: text("status").notNull(),
+    /** Reviewer note (e.g. rejection reason) */
+    note: text("note").notNull().default(""),
+    submittedAt: integer("submitted_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    decidedAt: integer("decided_at", { mode: "timestamp_ms" }),
+  },
+  (t) => [uniqueIndex("uq_approvals_user_week").on(t.userId, t.weekStart)],
+);
+
+export type Approval = typeof approvals.$inferSelect;
+
 export type OutboxEntry = typeof outbox.$inferSelect;
 
 export type Settings = typeof settings.$inferSelect;

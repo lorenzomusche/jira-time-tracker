@@ -13,6 +13,7 @@ import {
   type JiraWorklog,
 } from "../jira/client";
 import { parseDurationToSeconds, toJiraStarted } from "@contracts/time";
+import { assertWeekUnlocked, weekLock } from "./approvals";
 
 const logInput = z.object({
   issueKey: z.string().min(1),
@@ -173,6 +174,7 @@ export const worklogsRouter = createRouter({
     .input(logInput)
     .mutation(async ({ ctx, input }) => {
       const { seconds, started } = parseLogInput(input);
+      assertWeekUnlocked(await weekLock(ctx.user.id, started));
       const creds = credentialsFor(ctx.user);
       try {
         const created = await addWorklog(creds, input.issueKey, {
@@ -218,6 +220,7 @@ export const worklogsRouter = createRouter({
     .input(logInput.extend({ jiraWorklogId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const { seconds, started } = parseLogInput(input);
+      assertWeekUnlocked(await weekLock(ctx.user.id, started));
       const fields = { timeSpentSeconds: seconds, started, comment: input.comment };
       // Pending worklog: it never reached Jira — just update the local copy
       // and the queued "create" operation.
@@ -258,6 +261,20 @@ export const worklogsRouter = createRouter({
     .input(z.object({ issueKey: z.string(), jiraWorklogId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const db = getDb();
+      // The lock is driven by the worklog's own week, not the current one.
+      const local = await db
+        .select({ started: worklogs.started })
+        .from(worklogs)
+        .where(
+          and(
+            eq(worklogs.userId, ctx.user.id),
+            eq(worklogs.issueKey, input.issueKey),
+            eq(worklogs.jiraWorklogId, input.jiraWorklogId),
+          ),
+        );
+      if (local[0]) {
+        assertWeekUnlocked(await weekLock(ctx.user.id, local[0].started));
+      }
       // Pending worklog: drop the queued operation, nothing to do on Jira.
       if (isPendingId(input.jiraWorklogId)) {
         const db = getDb();

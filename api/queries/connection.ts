@@ -100,6 +100,16 @@ CREATE TABLE IF NOT EXISTS outbox (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_outbox_user ON outbox(user_id);
+CREATE TABLE IF NOT EXISTS approvals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  week_start TEXT NOT NULL,
+  status TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  submitted_at INTEGER NOT NULL,
+  decided_at INTEGER
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_approvals_user_week ON approvals(user_id, week_start);
 `;
 
 let instance: ReturnType<typeof createDb> | undefined;
