@@ -33,13 +33,26 @@ export function LogTimeDialog({
   worklog,
   trigger,
   onDone,
+  prefillSeconds,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   issueKey: string;
   worklog?: EditableWorklog;
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
   onDone?: () => void;
+  /** Pre-fills the duration (e.g. from a stopped timer). */
+  prefillSeconds?: number;
+  /** Controlled open state (optional; dialog is uncontrolled otherwise). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (o: boolean) => {
+    setInternalOpen(o);
+    onOpenChange?.(o);
+  };
   const [timeSpent, setTimeSpent] = useState("");
   const [started, setStarted] = useState("");
   const [comment, setComment] = useState("");
@@ -52,12 +65,12 @@ export function LogTimeDialog({
         setStarted(toLocalInputValue(new Date(worklog.started)));
         setComment(worklog.comment);
       } else {
-        setTimeSpent("");
+        setTimeSpent(prefillSeconds ? formatSeconds(prefillSeconds) : "");
         setStarted(toLocalInputValue(new Date()));
         setComment("");
       }
     }
-  }, [open, worklog]);
+  }, [open, worklog, prefillSeconds]);
 
   const parsed = parseDurationToSeconds(timeSpent);
   const invalid = timeSpent.trim().length > 0 && (!parsed || parsed <= 0);
@@ -91,7 +104,7 @@ export function LogTimeDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>

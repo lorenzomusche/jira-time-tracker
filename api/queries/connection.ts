@@ -65,6 +65,17 @@ CREATE TABLE IF NOT EXISTS worklogs (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_worklogs_user_issue_jira ON worklogs(user_id, issue_key, jira_worklog_id);
 CREATE INDEX IF NOT EXISTS idx_worklogs_user_started ON worklogs(user_id, started);
+CREATE TABLE IF NOT EXISTS timers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  issue_key TEXT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'running',
+  started_at INTEGER NOT NULL,
+  accumulated_seconds INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_timers_user_issue ON timers(user_id, issue_key);
 `;
 
 let instance: ReturnType<typeof createDb> | undefined;

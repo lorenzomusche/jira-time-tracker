@@ -107,6 +107,7 @@ export default function Issues() {
                   <TableHead className="w-24">Priorità</TableHead>
                   <TableHead className="w-24 text-right">Stimato</TableHead>
                   <TableHead className="w-24 text-right">Registrato</TableHead>
+                  <TableHead className="w-32">Timer</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>

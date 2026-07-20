@@ -3,6 +3,7 @@ import { ArrowLeft, ExternalLink, Pencil, Plus, RefreshCw, Trash2 } from "lucide
 import { trpc } from "@/providers/trpc";
 import { formatSeconds } from "@contracts/time";
 import { LogTimeDialog } from "@/components/LogTimeDialog";
+import { TimerControls } from "@/components/TimerControls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,6 +93,9 @@ export default function IssueDetail() {
           <p className="text-sm text-muted-foreground">
             {i.projectKey} — {i.projectName}
           </p>
+        </div>
+        <div className="rounded-md border bg-card px-2 py-1">
+          <TimerControls issueKey={key} />
         </div>
       </div>
 

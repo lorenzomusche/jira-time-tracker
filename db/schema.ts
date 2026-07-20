@@ -100,7 +100,32 @@ export const worklogs = sqliteTable(
   ],
 );
 
+export const timers = sqliteTable(
+  "timers",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    issueKey: text("issue_key").notNull(),
+    /** "running" | "paused" */
+    state: text("state").notNull().default("running"),
+    /** Start of the current run segment (meaningful when state = running) */
+    startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull(),
+    /** Seconds accumulated across previous run/pause segments */
+    accumulatedSeconds: integer("accumulated_seconds").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("uq_timers_user_issue").on(t.userId, t.issueKey)],
+);
+
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Issue = typeof issues.$inferSelect;
 export type Worklog = typeof worklogs.$inferSelect;
+export type Timer = typeof timers.$inferSelect;

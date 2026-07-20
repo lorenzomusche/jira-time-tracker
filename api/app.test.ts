@@ -253,6 +253,88 @@ describe("app router (integration, in-memory SQLite)", () => {
     expect(res.accountId).toBe("mario.rossi");
   });
 
+  describe("timers (fine tracking)", () => {
+    it("starts a timer and tracks elapsed time", async () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date("2026-07-20T10:00:00Z"));
+        const caller = router.createCaller(authedCtx);
+        await caller.timers.start({ issueKey: "PRJ-1" });
+
+        vi.setSystemTime(new Date("2026-07-20T10:01:30Z")); // +90s
+        const list = await caller.timers.list();
+        const t = list.find((x) => x.issueKey === "PRJ-1");
+        expect(t?.state).toBe("running");
+        expect(t?.elapsedSeconds).toBe(90);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("pause accumulates elapsed time; resume continues from it", async () => {
+      vi.useFakeTimers();
+      try {
+        const caller = router.createCaller(authedCtx);
+        vi.setSystemTime(new Date("2026-07-20T11:00:00Z"));
+        await caller.timers.discard({ issueKey: "PRJ-1" });
+        await caller.timers.start({ issueKey: "PRJ-1" });
+        vi.setSystemTime(new Date("2026-07-20T11:01:30Z")); // +90s
+        await caller.timers.pause({ issueKey: "PRJ-1" });
+
+        vi.setSystemTime(new Date("2026-07-20T11:05:00Z")); // +5m while paused
+        let list = await caller.timers.list();
+        let t = list.find((x) => x.issueKey === "PRJ-1");
+        expect(t?.state).toBe("paused");
+        expect(t?.elapsedSeconds).toBe(90); // unchanged while paused
+
+        await caller.timers.start({ issueKey: "PRJ-1" }); // resume
+        vi.setSystemTime(new Date("2026-07-20T11:05:30Z")); // +30s
+        list = await caller.timers.list();
+        t = list.find((x) => x.issueKey === "PRJ-1");
+        expect(t?.state).toBe("running");
+        expect(t?.elapsedSeconds).toBe(120);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("starting another issue auto-pauses the running timer", async () => {
+      vi.useFakeTimers();
+      try {
+        const caller = router.createCaller(authedCtx);
+        vi.setSystemTime(new Date("2026-07-20T12:00:00Z"));
+        await caller.timers.start({ issueKey: "OPS-7" });
+        const list = await caller.timers.list();
+        expect(list.find((x) => x.issueKey === "PRJ-1")?.state).toBe("paused");
+        expect(list.find((x) => x.issueKey === "OPS-7")?.state).toBe("running");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("stop returns tracked time rounded up to minutes and clears the timer", async () => {
+      vi.useFakeTimers();
+      try {
+        const caller = router.createCaller(authedCtx);
+        vi.setSystemTime(new Date("2026-07-20T12:00:45Z")); // OPS-7 running 45s
+        const res = await caller.timers.stop({ issueKey: "OPS-7" });
+        expect(res.found).toBe(true);
+        expect(res.seconds).toBe(60); // rounded up to whole minutes
+        const list = await caller.timers.list();
+        expect(list.find((x) => x.issueKey === "OPS-7")).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("discard removes a timer without logging", async () => {
+      const caller = router.createCaller(authedCtx);
+      await caller.timers.discard({ issueKey: "PRJ-1" });
+      const list = await caller.timers.list();
+      expect(list).toHaveLength(0);
+    });
+  });
+
   it("logs out and invalidates the session row", async () => {
     const caller = router.createCaller(authedCtx);
     await caller.auth.logout();

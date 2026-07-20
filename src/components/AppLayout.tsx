@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { ActiveTimerChip } from "@/components/TimerControls";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -67,6 +68,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-2">
+            <ActiveTimerChip />
             <Button
               variant="outline"
               size="sm"

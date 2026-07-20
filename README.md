@@ -8,6 +8,7 @@ Applicazione web full-stack per **catalogare le issue Jira assegnate** all'utent
 
 - **Login con credenziali Jira Cloud** (sito, email, API token) — il token è cifrato (AES-256-GCM) e salvato solo nel database locale
 - **Catalogo issue assegnate**: sync da Jira (`assignee = currentUser()`), ricerca full-text, filtri per stato e progetto, link diretto a Jira
+- **Fine tracking con timer live**: play / pausa / stop su ogni issue — allo stop il tempo tracciato (arrotondato al minuto) viene pre-caricato nel dialog di consuntivazione. Un solo timer attivo alla volta: avviandone uno gli altri vanno in pausa automaticamente. Badge sempre visibile nell'header
 - **Consuntivazione one-click**: registra tempo con sintassi Jira (`2h 30m`, `1d`, `45m`), modifica ed elimina worklog — tutto sincronizzato su Jira e archiviato in locale
 - **Dashboard**: ore oggi / settimana / mese, grafico ore ultimi 14 giorni, ripartizione per progetto, issue aperte
 - **Timesheet settimanale**: vista per giorno con totali e avanzamento verso le 8h
@@ -73,7 +74,7 @@ src/            React: Login, Dashboard, Issues, IssueDetail, Timesheet
 
 ## Test
 
-33 test: parsing/formatting durate, crypto, client Jira (fetch mockato, paginazione JQL, errori) e integrazione end-to-end dei router tRPC su SQLite in-memory (login, sync issue, worklog CRUD, statistiche, logout).
+38 test: parsing/formatting durate, crypto, client Jira (fetch mockato, paginazione JQL, errori) e integrazione end-to-end dei router tRPC su SQLite in-memory (login, sync issue, worklog CRUD, statistiche, logout).
 
 ## Note di sicurezza
 
