@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { ChevronLeft, ChevronRight, CopyPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, CopyPlus, Download } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { formatSeconds } from "@contracts/time";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,28 @@ export default function Timesheet() {
   }, [weekStart, logs.data]);
 
   const weekTotal = days.reduce((acc, d) => acc + d.total, 0);
+
+  /** Export the visible week's worklogs as CSV (native Blob download). */
+  const exportCsv = () => {
+    const rows = (logs.data ?? []).map((w) => ({
+      data: new Date(w.started).toLocaleDateString("it-IT"),
+      issue: w.issueKey,
+      secondi: w.timeSpentSeconds,
+      ore: (w.timeSpentSeconds / 3600).toFixed(2),
+      commento: w.comment.replace(/"/g, '""'),
+    }));
+    const header = "data;issue;secondi;ore;commento";
+    const body = rows.map((r) => `${r.data};${r.issue};${r.secondi};${r.ore};"${r.commento}"`);
+    const csv = "\ufeff" + [header, ...body].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `timesheet-${weekStart.toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Esportati ${rows.length} worklog`);
+  };
   const isCurrentWeek = weekOffset === 0;
 
   const utils = trpc.useUtils();
@@ -128,8 +150,19 @@ export default function Timesheet() {
         <h2 className="text-sm font-medium text-muted-foreground">
           Settimana del {weekStart.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })}
         </h2>
-        <div className="text-sm font-semibold">
-          Totale: {formatSeconds(weekTotal)}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportCsv}
+            disabled={!logs.data || logs.data.length === 0}
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            Esporta CSV
+          </Button>
+          <div className="text-sm font-semibold">
+            Totale: {formatSeconds(weekTotal)}
+          </div>
         </div>
       </div>
 

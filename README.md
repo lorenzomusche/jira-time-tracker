@@ -12,10 +12,12 @@ Applicazione web full-stack per **catalogare le issue Jira assegnate** all'utent
 - **Duplica giornata**: dalla timesheet copi tutti i worklog di un giorno su oggi con un click
 - **Fine tracking con timer live**: play / pausa / stop su ogni issue — allo stop il tempo tracciato (arrotondato al minuto) viene pre-caricato nel dialog di consuntivazione. Un solo timer attivo alla volta: avviandone uno gli altri vanno in pausa automaticamente. Badge sempre visibile nell'header
 - **Consuntivazione one-click**: registra tempo con sintassi Jira (`2h 30m`, `1d`, `45m`), modifica ed elimina worklog — tutto sincronizzato su Jira e archiviato in locale
+- **Dark mode**: tema chiaro/scuro/sistema con toggle nell'header
+- **Export CSV**: la settimana della timesheet si scarica in CSV (compatibile Excel) con un click
 - **Dashboard**: ore oggi / settimana / mese, grafico ore ultimi 14 giorni, ripartizione per progetto, issue aperte
 - **Timesheet settimanale**: vista per giorno con totali e avanzamento verso le 8h
 - **Storage SQLite** zero-config: il database si auto-inizializza al primo avvio
-- **Dipendenze sfoltite**: solo i pacchetti strettamente necessari (componenti UI inutilizzati rimossi, niente MySQL), ricerca issue con `<datalist>` nativo invece di librerie autocomplete
+- **Kit UI completo**: tutti i 50+ componenti shadcn/ui disponibili per estensioni future; ricerca issue con `<datalist>` nativo invece di librerie autocomplete
 
 ## Avvio rapido
 

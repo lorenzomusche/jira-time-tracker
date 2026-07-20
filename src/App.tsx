@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router";
+import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { useRequireAuth } from "@/hooks/useAuth";
@@ -24,7 +25,7 @@ function Protected({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Protected><Dashboard /></Protected>} />
@@ -34,6 +35,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster richColors position="bottom-right" />
-    </>
+    </ThemeProvider>
   );
 }
