@@ -10,6 +10,8 @@ Applicazione web full-stack per **catalogare le issue Jira assegnate** all'utent
 - **Catalogo issue assegnate**: sync da Jira (`assignee = currentUser()`), ricerca full-text, filtri per stato/progetto/label, ordinamento per priorità o label, link diretto a Jira
 - **Ricerca globale Jira**: cerca qualsiasi issue (anche non tua) per chiave o testo e importala nel catalogo solo se ti serve
 - **Pulizia catalogo**: un click elimina le issue locali senza storico di tracking (su Jira non cambia nulla)
+- **Command palette ⌘K**: salta a qualsiasi issue, naviga, sincronizza e cambia tema senza toccare il mouse
+- **Veloce di default**: paginazione server-side, ricerca con debounce, cache react-query (staleTime 30s, no refetch al focus)
 - **Issue preferite** ⭐: stella su ogni issue, sempre in cima alla lista, filtro dedicato, chip rapide nella consuntivazione rapida — e la pulizia catalogo le preserva
 - **Label Jira**: sincronizzate e mostrate come badge, filtrabili e ordinabili
 - **Kanban board**: colonne per stato con drag & drop nativo — spostare una card esegue la transizione di stato direttamente su Jira
@@ -84,7 +86,7 @@ src/            React: Login, Dashboard, Issues, IssueDetail, Timesheet
 
 ## Test
 
-47 test: parsing/formatting durate, crypto, client Jira (fetch mockato, paginazione JQL, errori) e integrazione end-to-end dei router tRPC su SQLite in-memory (login, sync issue, worklog CRUD, statistiche, logout).
+48 test: parsing/formatting durate, crypto, client Jira (fetch mockato, paginazione JQL, errori) e integrazione end-to-end dei router tRPC su SQLite in-memory (login, sync issue, worklog CRUD, statistiche, logout).
 
 ## Note di sicurezza
 

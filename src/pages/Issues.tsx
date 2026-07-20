@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { keepPreviousData } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import {
   BrushCleaning,
+  ChevronLeft,
+  ChevronRight,
   Check,
   Clock,
   ExternalLink,
@@ -48,7 +51,9 @@ type SortMode = "recent" | "priority" | "label";
 export default function Issues() {
   const navigate = useNavigate();
   const utils = trpc.useUtils();
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [status, setStatus] = useState<string>("all");
   const [project, setProject] = useState<string>("all");
   const [label, setLabel] = useState<string>("all");
@@ -79,13 +84,29 @@ export default function Issues() {
     onError: (e) => toast.error(e.message),
   });
 
-  const query = trpc.issues.list.useQuery({
-    search: search || undefined,
-    status: status === "all" ? undefined : status,
-    projectKey: project === "all" ? undefined : project,
-    label: label === "all" ? undefined : label,
-    favoriteOnly: favOnly || undefined,
-  });
+  // Debounce free-text search (300ms)
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // Any filter change restarts from page 1
+  useEffect(() => {
+    setPage(1);
+  }, [search, status, project, label, favOnly]);
+
+  const query = trpc.issues.list.useQuery(
+    {
+      search: search || undefined,
+      status: status === "all" ? undefined : status,
+      projectKey: project === "all" ? undefined : project,
+      label: label === "all" ? undefined : label,
+      favoriteOnly: favOnly || undefined,
+      page,
+      pageSize: 25,
+    },
+    { placeholderData: keepPreviousData },
+  );
 
   const data = query.data;
 
@@ -123,8 +144,8 @@ export default function Issues() {
           <Input
             className="pl-8"
             placeholder="Filtra il catalogo locale…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
         <Select value={status} onValueChange={setStatus}>
@@ -360,6 +381,34 @@ export default function Issues() {
           )}
         </CardContent>
       </Card>
+
+      {data && data.totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">
+            {data.total} issue — pagina {data.page} di {data.totalPages}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Prec
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= data.totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Succ
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

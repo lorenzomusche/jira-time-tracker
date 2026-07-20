@@ -282,6 +282,23 @@ describe("app router (integration, in-memory SQLite)", () => {
     expect(ext?.labels).toEqual(["imported"]);
   });
 
+  it("paginates the local catalog server-side", async () => {
+    const caller = router.createCaller(authedCtx);
+    // catalog: PRJ-1, OPS-7, EXT-9 (updated desc: EXT-9, PRJ-1, OPS-7)
+    const p1 = await caller.issues.list({ pageSize: 2, page: 1 });
+    expect(p1.total).toBe(3);
+    expect(p1.totalPages).toBe(2);
+    expect(p1.issues.map((i) => i.key)).toEqual(["EXT-9", "PRJ-1"]);
+
+    const p2 = await caller.issues.list({ pageSize: 2, page: 2 });
+    expect(p2.issues.map((i) => i.key)).toEqual(["OPS-7"]);
+
+    // defaults: everything in one page
+    const all = await caller.issues.list();
+    expect(all.issues).toHaveLength(3);
+    expect(all.page).toBe(1);
+  });
+
   it("global search flags imported and ownership", async () => {
     const caller = router.createCaller(authedCtx);
     const results = await caller.issues.search({ query: "EXT-9" });

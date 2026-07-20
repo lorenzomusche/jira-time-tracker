@@ -15,6 +15,8 @@ import {
 import { toast } from "sonner";
 import { ActiveTimerChip } from "@/components/TimerControls";
 import { ModeToggle } from "@/components/ModeToggle";
+import { CommandPalette } from "@/components/CommandPalette";
+import { Search } from "lucide-react";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -70,6 +72,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() =>
+                window.dispatchEvent(
+                  new KeyboardEvent("keydown", { key: "k", ctrlKey: true }),
+                )
+              }
+              className="hidden items-center gap-2 rounded-md border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent sm:flex"
+            >
+              <Search className="h-3.5 w-3.5" />
+              Cerca…
+              <kbd className="rounded border bg-background px-1 text-[10px]">⌘K</kbd>
+            </button>
             <ActiveTimerChip />
             <ModeToggle />
             <Button
@@ -112,6 +126,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main className="mx-auto max-w-7xl p-4 md:p-6">{children}</main>
+      <CommandPalette />
     </div>
   );
 }

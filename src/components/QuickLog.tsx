@@ -15,7 +15,7 @@ const PRESETS = ["15m", "30m", "1h", "2h", "4h", "1d"];
  */
 export function QuickLog() {
   const utils = trpc.useUtils();
-  const issues = trpc.issues.list.useQuery();
+  const issues = trpc.issues.list.useQuery({ pageSize: 200 });
   const [issueInput, setIssueInput] = useState("");
   const [timeSpent, setTimeSpent] = useState("");
   const [comment, setComment] = useState("");

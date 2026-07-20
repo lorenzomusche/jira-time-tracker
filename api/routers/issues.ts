@@ -190,10 +190,14 @@ export const issuesRouter = createRouter({
           label: z.string().optional(),
           search: z.string().optional(),
           favoriteOnly: z.boolean().optional(),
+          page: z.number().int().min(1).default(1),
+          pageSize: z.number().int().min(1).max(200).default(25),
         })
         .optional(),
     )
     .query(async ({ ctx, input }) => {
+      const page = input?.page ?? 1;
+      const pageSize = input?.pageSize ?? 25;
       const db = getDb();
       const conds = [eq(issues.userId, ctx.user.id)];
       if (input?.status) conds.push(eq(issues.status, input.status));
@@ -207,12 +211,22 @@ export const issuesRouter = createRouter({
         );
       }
 
-      const rows = await db
-        .select()
-        .from(issues)
-        .where(and(...conds))
-        // favorites first, then most recently updated
-        .orderBy(desc(issues.favorite), desc(issues.jiraUpdated));
+      const where = and(...conds);
+      const [rows, countRows] = await Promise.all([
+        db
+          .select()
+          .from(issues)
+          .where(where)
+          // favorites first, then most recently updated
+          .orderBy(desc(issues.favorite), desc(issues.jiraUpdated))
+          .limit(pageSize)
+          .offset((page - 1) * pageSize),
+        db
+          .select({ total: sql<number>`count(*)` })
+          .from(issues)
+          .where(where),
+      ]);
+      const total = countRows[0]?.total ?? 0;
 
       const facets = await db
         .select({
@@ -250,6 +264,10 @@ export const issuesRouter = createRouter({
         statuses,
         projects,
         labels: [...labelsSet].sort(),
+        total,
+        page,
+        pageSize,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
       };
     }),
 

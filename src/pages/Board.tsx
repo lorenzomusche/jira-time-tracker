@@ -21,7 +21,7 @@ const COLUMN_COLORS: Record<string, string> = {
 
 export default function Board() {
   const utils = trpc.useUtils();
-  const query = trpc.issues.list.useQuery();
+  const query = trpc.issues.list.useQuery({ pageSize: 200 });
   const [dragOver, setDragOver] = useState<string | null>(null);
 
   const transition = trpc.issues.transition.useMutation({
