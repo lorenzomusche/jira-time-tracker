@@ -59,6 +59,8 @@ export const issues = sqliteTable(
     labels: text("labels").notNull().default("[]"),
     /** Assignee accountId (Cloud) or username (Server/DC) */
     assigneeId: text("assignee_id").notNull().default(""),
+    /** 1 = starred as favorite by the user */
+    favorite: integer("favorite").notNull().default(0),
     timeEstimateSeconds: integer("time_estimate_seconds"),
     timeSpentSeconds: integer("time_spent_seconds"),
     dueDate: text("due_date"),

@@ -14,6 +14,7 @@ import { formatSeconds } from "@contracts/time";
 import { LogTimeDialog } from "@/components/LogTimeDialog";
 import { Button } from "@/components/ui/button";
 import { TimerControls } from "@/components/TimerControls";
+import { FavoriteStar } from "@/components/FavoriteStar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,7 @@ export default function Issues() {
   const [project, setProject] = useState<string>("all");
   const [label, setLabel] = useState<string>("all");
   const [sort, setSort] = useState<SortMode>("recent");
+  const [favOnly, setFavOnly] = useState(false);
 
   // Global Jira search panel
   const [jiraSearchOpen, setJiraSearchOpen] = useState(false);
@@ -82,6 +84,7 @@ export default function Issues() {
     status: status === "all" ? undefined : status,
     projectKey: project === "all" ? undefined : project,
     label: label === "all" ? undefined : label,
+    favoriteOnly: favOnly || undefined,
   });
 
   const data = query.data;
@@ -167,6 +170,14 @@ export default function Issues() {
             <SelectItem value="label">Per label</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          variant={favOnly ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFavOnly((v) => !v)}
+          title="Mostra solo i preferiti"
+        >
+          ★ Preferiti
+        </Button>
         <Button
           variant={jiraSearchOpen ? "default" : "outline"}
           size="sm"
@@ -283,6 +294,11 @@ export default function Issues() {
                   >
                     <TableCell className="font-mono text-xs font-medium">
                       <div className="flex items-center gap-1.5">
+                        <FavoriteStar
+                          issueKey={i.key}
+                          favorite={i.favorite === 1}
+                          className="-ml-2 h-6 w-6"
+                        />
                         {i.key}
                         {!i.isMine && (
                           <span

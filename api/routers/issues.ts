@@ -42,7 +42,11 @@ async function upsertIssue(userId: number, siteUrl: string, i: JiraSearchedIssue
   await db
     .insert(issues)
     .values(row)
-    .onConflictDoUpdate({ target: [issues.userId, issues.key], set: row });
+    .onConflictDoUpdate({
+      target: [issues.userId, issues.key],
+      // never overwrite the local-only "favorite" flag on sync
+      set: { ...row, favorite: undefined },
+    });
 }
 
 /** JQL for free-text global search: exact key, or full-text match. */
@@ -112,7 +116,25 @@ export const issuesRouter = createRouter({
       return { imported: remote.key };
     }),
 
-  /** Delete local issues that have no tracked worklog history. */
+  /** Star/unstar an issue as favorite. */
+  toggleFavorite: protectedProcedure
+    .input(z.object({ key: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = getDb();
+      const rows = await db
+        .select({ id: issues.id, favorite: issues.favorite })
+        .from(issues)
+        .where(and(eq(issues.userId, ctx.user.id), eq(issues.key, input.key)))
+        .limit(1);
+      if (!rows[0]) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Issue non trovata" });
+      }
+      const next = rows[0].favorite === 1 ? 0 : 1;
+      await db.update(issues).set({ favorite: next }).where(eq(issues.id, rows[0].id));
+      return { key: input.key, favorite: next === 1 };
+    }),
+
+  /** Delete local issues with no tracked worklogs (favorites are kept). */
   cleanup: protectedProcedure.mutation(async ({ ctx }) => {
     const db = getDb();
     const tracked = await db
@@ -123,10 +145,12 @@ export const issuesRouter = createRouter({
     const trackedKeys = new Set(tracked.map((t) => t.issueKey));
 
     const local = await db
-      .select({ id: issues.id, key: issues.key })
+      .select({ id: issues.id, key: issues.key, favorite: issues.favorite })
       .from(issues)
       .where(eq(issues.userId, ctx.user.id));
-    const toDelete = local.filter((l) => !trackedKeys.has(l.key)).map((l) => l.id);
+    const toDelete = local
+      .filter((l) => !trackedKeys.has(l.key) && l.favorite !== 1)
+      .map((l) => l.id);
 
     if (toDelete.length > 0) {
       await db.delete(issues).where(inArray(issues.id, toDelete));
@@ -165,6 +189,7 @@ export const issuesRouter = createRouter({
           projectKey: z.string().optional(),
           label: z.string().optional(),
           search: z.string().optional(),
+          favoriteOnly: z.boolean().optional(),
         })
         .optional(),
     )
@@ -174,6 +199,7 @@ export const issuesRouter = createRouter({
       if (input?.status) conds.push(eq(issues.status, input.status));
       if (input?.projectKey) conds.push(eq(issues.projectKey, input.projectKey));
       if (input?.label) conds.push(sql`${issues.labels} LIKE ${"%" + input.label + "%"}`);
+      if (input?.favoriteOnly) conds.push(eq(issues.favorite, 1));
       if (input?.search) {
         const q = `%${input.search}%`;
         conds.push(
@@ -185,7 +211,8 @@ export const issuesRouter = createRouter({
         .select()
         .from(issues)
         .where(and(...conds))
-        .orderBy(desc(issues.jiraUpdated));
+        // favorites first, then most recently updated
+        .orderBy(desc(issues.favorite), desc(issues.jiraUpdated));
 
       const facets = await db
         .select({

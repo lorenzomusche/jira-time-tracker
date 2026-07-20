@@ -4,6 +4,7 @@ import { trpc } from "@/providers/trpc";
 import { formatSeconds } from "@contracts/time";
 import { LogTimeDialog } from "@/components/LogTimeDialog";
 import { TimerControls } from "@/components/TimerControls";
+import { FavoriteStar } from "@/components/FavoriteStar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,6 +77,7 @@ export default function IssueDetail() {
         </Button>
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2">
+            <FavoriteStar issueKey={i.key} favorite={i.favorite === 1} className="h-6 w-6" />
             <span className="font-mono text-sm text-muted-foreground">{i.key}</span>
             <Badge variant="outline">{i.issueType}</Badge>
             <Badge>{i.status}</Badge>

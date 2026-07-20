@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS issues (
   priority TEXT NOT NULL DEFAULT '',
   labels TEXT NOT NULL DEFAULT '[]',
   assignee_id TEXT NOT NULL DEFAULT '',
+  favorite INTEGER NOT NULL DEFAULT 0,
   time_estimate_seconds INTEGER,
   time_spent_seconds INTEGER,
   due_date TEXT,
@@ -111,6 +112,9 @@ function createDb() {
   }
   if (!issueColNames.has("assignee_id")) {
     sqlite.exec("ALTER TABLE issues ADD COLUMN assignee_id TEXT NOT NULL DEFAULT ''");
+  }
+  if (!issueColNames.has("favorite")) {
+    sqlite.exec("ALTER TABLE issues ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0");
   }
   return drizzle(sqlite, { schema: fullSchema });
 }

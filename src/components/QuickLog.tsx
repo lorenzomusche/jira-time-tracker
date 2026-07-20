@@ -39,6 +39,8 @@ export function QuickLog() {
     return list.find((i) => i.key.toUpperCase() === key) ?? null;
   })();
 
+  const favorites = (issues.data?.issues ?? []).filter((i) => i.favorite === 1);
+
   const parsed = parseDurationToSeconds(timeSpent);
   const canSubmit = !!matched && !!parsed && parsed > 0 && !create.isPending;
 
@@ -80,6 +82,23 @@ export function QuickLog() {
             onChange={(e) => setTimeSpent(e.target.value)}
           />
         </div>
+        {favorites.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-xs text-muted-foreground">★</span>
+            {favorites.slice(0, 8).map((f) => (
+              <Button
+                key={f.key}
+                type="button"
+                variant={matched?.key === f.key ? "default" : "secondary"}
+                size="sm"
+                className="h-7 px-2 font-mono text-xs"
+                onClick={() => setIssueInput(`${f.key} — ${f.summary}`)}
+              >
+                {f.key}
+              </Button>
+            ))}
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-1">
           {PRESETS.map((p) => (
             <Button

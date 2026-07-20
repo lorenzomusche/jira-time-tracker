@@ -290,14 +290,41 @@ describe("app router (integration, in-memory SQLite)", () => {
     expect(results[0].isMine).toBe(false);
   });
 
+  it("favorites: toggle, ordering, filter and sync preservation", async () => {
+    const caller = router.createCaller(authedCtx);
+
+    // star OPS-7
+    const toggled = await caller.issues.toggleFavorite({ key: "OPS-7" });
+    expect(toggled.favorite).toBe(true);
+
+    // favorites come first in the list
+    const list = await caller.issues.list();
+    expect(list.issues[0].key).toBe("OPS-7");
+    expect(list.issues[0].favorite).toBe(1);
+
+    // favoriteOnly filter
+    const only = await caller.issues.list({ favoriteOnly: true });
+    expect(only.issues.map((i) => i.key)).toEqual(["OPS-7"]);
+
+    // re-sync must preserve the local favorite flag
+    await caller.issues.sync();
+    const after = await caller.issues.list({ favoriteOnly: true });
+    expect(after.issues.map((i) => i.key)).toEqual(["OPS-7"]);
+
+    // toggle off
+    const off = await caller.issues.toggleFavorite({ key: "OPS-7" });
+    expect(off.favorite).toBe(false);
+    await caller.issues.toggleFavorite({ key: "OPS-7" }); // back on for cleanup test
+  });
+
   it("cleanup deletes only issues without tracked worklogs", async () => {
     const caller = router.createCaller(authedCtx);
-    // PRJ-1 has a worklog (created in a previous test), OPS-7 and EXT-9 do not
+    // PRJ-1 has a worklog; OPS-7 is a favorite (kept); EXT-9 has neither → deleted
     const res = await caller.issues.cleanup();
-    expect(res.deleted).toBe(2);
-    expect(res.kept).toBe(1);
+    expect(res.deleted).toBe(1);
+    expect(res.kept).toBe(2);
     const list = await caller.issues.list();
-    expect(list.issues.map((i) => i.key)).toEqual(["PRJ-1"]);
+    expect(list.issues.map((i) => i.key)).toEqual(["OPS-7", "PRJ-1"]);
   });
 
   it("transitions an issue to a new status and refreshes it locally", async () => {
@@ -313,9 +340,9 @@ describe("app router (integration, in-memory SQLite)", () => {
     const stats = await caller.stats.dashboard();
     expect(stats.weekSeconds).toBe(9000);
     expect(stats.monthSeconds).toBe(9000);
-    // after cleanup: only PRJ-1 remains, and it was transitioned to Done
-    expect(stats.issueCount).toBe(1);
-    expect(stats.openIssueCount).toBe(0);
+    // after cleanup: PRJ-1 (Done) and OPS-7 (favorite, To Do) remain
+    expect(stats.issueCount).toBe(2);
+    expect(stats.openIssueCount).toBe(1);
     expect(stats.perDay).toHaveLength(14);
     expect(stats.perDay.reduce((a, d) => a + d.seconds, 0)).toBe(9000);
     expect(stats.perProject[0].projectKey).toBe("PRJ");
