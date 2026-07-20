@@ -139,6 +139,8 @@ export const settings = sqliteTable("settings", {
   /** Notify when a timer runs longer than this (minutes). 0 = disabled */
   timerAlertMinutes: integer("timer_alert_minutes").notNull().default(120),
   notifyEnabled: integer("notify_enabled").notNull().default(1),
+  /** JSON array of { id, visible } — custom dashboard layout ("" = default) */
+  dashboardLayout: text("dashboard_layout").notNull().default(""),
 });
 
 export type User = typeof users.$inferSelect;

@@ -385,6 +385,43 @@ describe("app router (integration, in-memory SQLite)", () => {
     expect(again.dailyTargetSeconds).toBe(6 * 3600);
   });
 
+  it("settings: persists a custom dashboard layout", async () => {
+    const caller = router.createCaller(authedCtx);
+    // default layout: all known widgets, all visible
+    const defaults = await caller.settings.get();
+    expect(defaults.dashboard.length).toBe(6);
+    expect(defaults.dashboard.every((w) => w.visible)).toBe(true);
+
+    const custom = [
+      { id: "charts", visible: true },
+      { id: "stats", visible: false },
+      { id: "quicklog", visible: true },
+      { id: "unknown-widget", visible: true },
+    ];
+    const updated = await caller.settings.update({ dashboardLayout: custom });
+    // unknown ids dropped, missing widgets appended at the end, order kept
+    expect(updated.dashboard.map((w) => w.id)).toEqual([
+      "charts",
+      "stats",
+      "quicklog",
+      "goals",
+      "deadlines",
+      "favorites",
+    ]);
+    expect(updated.dashboard.find((w) => w.id === "stats")?.visible).toBe(false);
+
+    // an unrelated update must not touch the saved layout
+    await caller.settings.update({ timerAlertMinutes: 60 });
+    const again = await caller.settings.get();
+    expect(again.dashboard.map((w) => w.id).slice(0, 3)).toEqual([
+      "charts",
+      "stats",
+      "quicklog",
+    ]);
+    // restore defaults for other tests
+    await caller.settings.update({ timerAlertMinutes: 120 });
+  });
+
   it("reports: groups worklogs by day, issue and project", async () => {
     const caller = router.createCaller(authedCtx);
     // add a second worklog on OPS-7 (PRJ-1 already has 9000s today)

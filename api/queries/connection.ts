@@ -137,6 +137,14 @@ function createDb() {
   if (!issueColNames.has("favorite")) {
     sqlite.exec("ALTER TABLE issues ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0");
   }
+  const settingsCols = sqlite
+    .prepare("SELECT name FROM pragma_table_info('settings')")
+    .all() as { name: string }[];
+  if (!settingsCols.some((c) => c.name === "dashboard_layout")) {
+    sqlite.exec(
+      "ALTER TABLE settings ADD COLUMN dashboard_layout TEXT NOT NULL DEFAULT ''",
+    );
+  }
   return drizzle(sqlite, { schema: fullSchema });
 }
 
