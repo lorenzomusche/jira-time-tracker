@@ -19,11 +19,13 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
-/** Build Jira credentials for the authenticated user (decrypts stored token). */
+/** Build Jira credentials for the authenticated user (decrypts stored secret). */
 export function credentialsFor(user: User): JiraCredentials {
   return {
     siteUrl: user.siteUrl,
-    email: user.email,
-    apiToken: decrypt(user.encryptedToken),
+    deployment: user.deployment === "server" ? "server" : "cloud",
+    authType: user.authType === "bearer" ? "bearer" : "basic",
+    username: user.email, // login identifier: email (Cloud) or username (Server)
+    secret: decrypt(user.encryptedToken),
   };
 }

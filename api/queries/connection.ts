@@ -12,6 +12,8 @@ const BOOTSTRAP_SQL = `
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   site_url TEXT NOT NULL,
+  deployment TEXT NOT NULL DEFAULT 'cloud',
+  auth_type TEXT NOT NULL DEFAULT 'basic',
   account_id TEXT NOT NULL,
   email TEXT NOT NULL,
   display_name TEXT NOT NULL,
@@ -76,6 +78,17 @@ function createDb() {
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
   sqlite.exec(BOOTSTRAP_SQL);
+  // Lightweight migrations for databases created by older versions
+  const userCols = sqlite
+    .prepare("SELECT name FROM pragma_table_info('users')")
+    .all() as { name: string }[];
+  const colNames = new Set(userCols.map((c) => c.name));
+  if (!colNames.has("deployment")) {
+    sqlite.exec("ALTER TABLE users ADD COLUMN deployment TEXT NOT NULL DEFAULT 'cloud'");
+  }
+  if (!colNames.has("auth_type")) {
+    sqlite.exec("ALTER TABLE users ADD COLUMN auth_type TEXT NOT NULL DEFAULT 'basic'");
+  }
   return drizzle(sqlite, { schema: fullSchema });
 }
 

@@ -1,6 +1,10 @@
 import type { JiraCredentials } from "@contracts/types";
 
-/** Thin typed client for the Jira Cloud REST API v3. */
+/**
+ * Typed client for the Jira REST API.
+ * Supports Jira Cloud (REST API v3) and Jira Server / Data Center 8.x (REST API v2),
+ * including Jira Server 8.21.
+ */
 
 export class JiraApiError extends Error {
   status: number;
@@ -17,10 +21,17 @@ function normalizeSiteUrl(siteUrl: string): string {
 }
 
 function authHeader(creds: JiraCredentials): string {
+  if (creds.authType === "bearer") {
+    return `Bearer ${creds.secret}`;
+  }
   return (
     "Basic " +
-    Buffer.from(`${creds.email}:${creds.apiToken}`).toString("base64")
+    Buffer.from(`${creds.username}:${creds.secret}`).toString("base64")
   );
+}
+
+function apiBase(creds: JiraCredentials): string {
+  return creds.deployment === "server" ? "/rest/api/2" : "/rest/api/3";
 }
 
 async function jiraFetch<T>(
@@ -62,7 +73,11 @@ async function jiraFetch<T>(
 // ---------- Types ----------
 
 export type JiraMyself = {
-  accountId: string;
+  /** Cloud only */
+  accountId?: string;
+  /** Server/DC only */
+  name?: string;
+  key?: string;
   emailAddress?: string;
   displayName: string;
   avatarUrls?: { "48x48"?: string };
@@ -89,13 +104,17 @@ export type JiraWorklog = {
   timeSpentSeconds: number;
   started: string;
   comment?: unknown;
-  author?: { accountId?: string; displayName?: string };
+  author?: { accountId?: string; name?: string; displayName?: string };
   created?: string;
   updated?: string;
 };
 
-// ---------- ADF comment helpers ----------
+// ---------- Comment helpers ----------
 
+/**
+ * Cloud worklog comments use Atlassian Document Format (ADF);
+ * Server/DC 8.x expects a plain-text string.
+ */
 export function adfFromText(text: string) {
   const paragraphs = text.split(/\n+/).filter((l) => l.trim().length > 0);
   return {
@@ -126,10 +145,14 @@ export function textFromAdf(node: unknown): string {
   return "";
 }
 
+function encodeComment(creds: JiraCredentials, text: string): unknown {
+  return creds.deployment === "server" ? text : adfFromText(text);
+}
+
 // ---------- API calls ----------
 
 export async function getMyself(creds: JiraCredentials): Promise<JiraMyself> {
-  return jiraFetch<JiraMyself>(creds, "/rest/api/3/myself");
+  return jiraFetch<JiraMyself>(creds, `${apiBase(creds)}/myself`);
 }
 
 const ISSUE_FIELDS =
@@ -139,6 +162,32 @@ const ISSUE_FIELDS =
 export async function fetchAssignedIssues(
   creds: JiraCredentials,
 ): Promise<JiraSearchedIssue[]> {
+  if (creds.deployment === "server") {
+    // Server/DC 8.x: classic /search endpoint with startAt pagination
+    const out: JiraSearchedIssue[] = [];
+    const pageSize = 100;
+    let startAt = 0;
+    let total = Infinity;
+    while (startAt < total) {
+      const params = new URLSearchParams({
+        jql: "assignee = currentUser() ORDER BY updated DESC",
+        fields: ISSUE_FIELDS,
+        maxResults: String(pageSize),
+        startAt: String(startAt),
+      });
+      const page = await jiraFetch<{
+        issues?: JiraSearchedIssue[];
+        total?: number;
+      }>(creds, `${apiBase(creds)}/search?${params.toString()}`);
+      out.push(...(page.issues ?? []));
+      total = page.total ?? out.length;
+      startAt += pageSize;
+      if ((page.issues ?? []).length === 0) break;
+    }
+    return out;
+  }
+
+  // Cloud: /search/jql with nextPageToken pagination
   const out: JiraSearchedIssue[] = [];
   let nextPageToken: string | undefined;
   do {
@@ -152,7 +201,7 @@ export async function fetchAssignedIssues(
       issues?: JiraSearchedIssue[];
       nextPageToken?: string;
       isLast?: boolean;
-    }>(creds, `/rest/api/3/search/jql?${params.toString()}`);
+    }>(creds, `${apiBase(creds)}/search/jql?${params.toString()}`);
     out.push(...(page.issues ?? []));
     nextPageToken = page.isLast === false ? page.nextPageToken : undefined;
   } while (nextPageToken);
@@ -165,7 +214,7 @@ export async function fetchWorklogs(
 ): Promise<JiraWorklog[]> {
   const res = await jiraFetch<{ worklogs?: JiraWorklog[] }>(
     creds,
-    `/rest/api/3/issue/${encodeURIComponent(issueKey)}/worklog?maxResults=1000`,
+    `${apiBase(creds)}/issue/${encodeURIComponent(issueKey)}/worklog?maxResults=1000`,
   );
   return res.worklogs ?? [];
 }
@@ -177,13 +226,13 @@ export async function addWorklog(
 ): Promise<JiraWorklog> {
   return jiraFetch<JiraWorklog>(
     creds,
-    `/rest/api/3/issue/${encodeURIComponent(issueKey)}/worklog`,
+    `${apiBase(creds)}/issue/${encodeURIComponent(issueKey)}/worklog`,
     {
       method: "POST",
       body: JSON.stringify({
         timeSpentSeconds: input.timeSpentSeconds,
         started: input.started,
-        comment: adfFromText(input.comment),
+        comment: encodeComment(creds, input.comment),
       }),
     },
   );
@@ -197,13 +246,13 @@ export async function updateWorklog(
 ): Promise<JiraWorklog> {
   return jiraFetch<JiraWorklog>(
     creds,
-    `/rest/api/3/issue/${encodeURIComponent(issueKey)}/worklog/${encodeURIComponent(worklogId)}`,
+    `${apiBase(creds)}/issue/${encodeURIComponent(issueKey)}/worklog/${encodeURIComponent(worklogId)}`,
     {
       method: "PUT",
       body: JSON.stringify({
         timeSpentSeconds: input.timeSpentSeconds,
         started: input.started,
-        comment: adfFromText(input.comment),
+        comment: encodeComment(creds, input.comment),
       }),
     },
   );
@@ -216,7 +265,7 @@ export async function deleteWorklog(
 ): Promise<void> {
   await jiraFetch<void>(
     creds,
-    `/rest/api/3/issue/${encodeURIComponent(issueKey)}/worklog/${encodeURIComponent(worklogId)}`,
+    `${apiBase(creds)}/issue/${encodeURIComponent(issueKey)}/worklog/${encodeURIComponent(worklogId)}`,
     { method: "DELETE" },
   );
 }

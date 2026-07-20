@@ -24,8 +24,14 @@ Al primo avvio viene creato `./data/app.db` con lo schema completo.
 
 ### Login
 
+**Jira Server / Data Center 8.x** (es. 8.21):
+1. Seleziona "Jira Server / DC" nella pagina di login
+2. Inserisci l'URL (es. `https://jira.azienda.it`), il tuo username e la password
+3. Se hai Jira **Data Center 8.14+**, consigliato il Personal Access Token (Profilo → Personal Access Tokens) selezionando il metodo "Personal Access Token"
+
+**Jira Cloud**:
 1. Vai su [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens) e crea un API token
-2. Nell'app inserisci: URL del sito (es. `https://azienda.atlassian.net`), email Atlassian e token
+2. Seleziona "Jira Cloud" e inserisci URL del sito (es. `https://azienda.atlassian.net`), email Atlassian e token
 
 ## Comandi
 
@@ -67,7 +73,7 @@ src/            React: Login, Dashboard, Issues, IssueDetail, Timesheet
 
 ## Test
 
-28 test: parsing/formatting durate, crypto, client Jira (fetch mockato, paginazione JQL, errori) e integrazione end-to-end dei router tRPC su SQLite in-memory (login, sync issue, worklog CRUD, statistiche, logout).
+33 test: parsing/formatting durate, crypto, client Jira (fetch mockato, paginazione JQL, errori) e integrazione end-to-end dei router tRPC su SQLite in-memory (login, sync issue, worklog CRUD, statistiche, logout).
 
 ## Note di sicurezza
 

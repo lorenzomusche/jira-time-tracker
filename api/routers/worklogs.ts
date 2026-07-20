@@ -89,8 +89,12 @@ export const worklogsRouter = createRouter({
       const creds = credentialsFor(ctx.user);
       const remote = await fetchWorklogs(creds, input.issueKey);
       const db = getDb();
+      // Cloud matches on accountId; Server/DC 8.x exposes the author "name"
       const mine = remote.filter(
-        (w) => !w.author?.accountId || w.author.accountId === ctx.user.accountId,
+        (w) =>
+          (!w.author?.accountId && !w.author?.name) ||
+          w.author.accountId === ctx.user.accountId ||
+          w.author.name === ctx.user.accountId,
       );
       for (const w of mine) {
         const row = rowFromJira(ctx.user.id, input.issueKey, w);

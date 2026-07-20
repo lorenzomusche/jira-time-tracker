@@ -10,8 +10,18 @@ import {
 
 const creds = {
   siteUrl: "https://example.atlassian.net/",
-  email: "user@example.com",
-  apiToken: "token",
+  deployment: "cloud" as const,
+  authType: "basic" as const,
+  username: "user@example.com",
+  secret: "token",
+};
+
+const serverCreds = {
+  siteUrl: "https://jira.example.it/",
+  deployment: "server" as const,
+  authType: "basic" as const,
+  username: "mario.rossi",
+  secret: "password123",
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -114,5 +124,79 @@ describe("Jira API client", () => {
     const body = JSON.parse(String(init?.body));
     expect(body.timeSpentSeconds).toBe(3600);
     expect(body.comment.type).toBe("doc");
+  });
+});
+
+describe("Jira Server / DC 8.x mode", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("uses REST API v2 and basic auth with username", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      jsonResponse({ name: "mario.rossi", displayName: "Mario Rossi" }),
+    );
+    const me = await getMyself(serverCreds);
+    expect(me.name).toBe("mario.rossi");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("https://jira.example.it/rest/api/2/myself");
+    const expected =
+      "Basic " + Buffer.from("mario.rossi:password123").toString("base64");
+    expect((init.headers as Record<string, string>).Authorization).toBe(expected);
+  });
+
+  it("supports Personal Access Token bearer auth (DC 8.14+)", async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      jsonResponse({ name: "mario.rossi", displayName: "Mario Rossi" }),
+    );
+    await getMyself({ ...serverCreds, authType: "bearer", secret: "pat-xyz" });
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect((init.headers as Record<string, string>).Authorization).toBe(
+      "Bearer pat-xyz",
+    );
+  });
+
+  it("paginates /rest/api/2/search with startAt until total", async () => {
+    const mock = fetch as ReturnType<typeof vi.fn>;
+    const mkIssue = (n: number) => ({
+      id: String(n),
+      key: `SRV-${n}`,
+      fields: { summary: `Issue ${n}` },
+    });
+    // pageSize is 100: first page full (100 issues, total 101), second page 1 issue
+    mock.mockResolvedValueOnce(
+      jsonResponse({
+        issues: Array.from({ length: 100 }, (_, i) => mkIssue(i + 1)),
+        total: 101,
+      }),
+    );
+    mock.mockResolvedValueOnce(
+      jsonResponse({ issues: [mkIssue(101)], total: 101 }),
+    );
+    const issues = await fetchAssignedIssues(serverCreds);
+    expect(issues).toHaveLength(101);
+    expect(issues[100].key).toBe("SRV-101");
+    expect(String(mock.mock.calls[0][0])).toContain("/rest/api/2/search");
+    expect(String(mock.mock.calls[0][0])).toContain("startAt=0");
+    expect(String(mock.mock.calls[1][0])).toContain("startAt=100");
+  });
+
+  it("sends plain-text comments on worklogs (no ADF)", async () => {
+    const mock = fetch as ReturnType<typeof vi.fn>;
+    mock.mockResolvedValueOnce(
+      jsonResponse({ id: "20001", timeSpentSeconds: 1800 }),
+    );
+    await addWorklog(serverCreds, "SRV-1", {
+      timeSpentSeconds: 1800,
+      started: "2026-07-20T10:00:00.000+0200",
+      comment: "test server",
+    });
+    const [url, init] = mock.mock.calls[0];
+    expect(String(url)).toContain("/rest/api/2/issue/SRV-1/worklog");
+    const body = JSON.parse(String(init?.body));
+    expect(body.comment).toBe("test server");
   });
 });

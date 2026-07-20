@@ -61,6 +61,18 @@ function mockJiraFetch() {
         avatarUrls: { "48x48": "https://example.com/avatar.png" },
       });
     }
+    if (url.endsWith("/rest/api/2/myself")) {
+      // Jira Server/DC 8.x: no accountId, identified by username
+      return jsonResponse({
+        name: "mario.rossi",
+        key: "mario.rossi",
+        displayName: "Mario Rossi",
+        emailAddress: "mario@example.com",
+      });
+    }
+    if (url.includes("/rest/api/2/search")) {
+      return jsonResponse({ issues: JIRA_ISSUES, total: JIRA_ISSUES.length });
+    }
     if (url.includes("/rest/api/3/search/jql")) {
       return jsonResponse({ issues: JIRA_ISSUES, isLast: true });
     }
@@ -112,8 +124,10 @@ describe("app router (integration, in-memory SQLite)", () => {
       .createCaller(anonCtx())
       .auth.login({
         siteUrl: "https://example.atlassian.net",
-        email: "mario@example.com",
-        apiToken: "secret-token",
+        deployment: "cloud",
+        authType: "basic",
+        username: "mario@example.com",
+        secret: "secret-token",
       });
     expect(res.displayName).toBe("Mario Rossi");
 
@@ -151,8 +165,10 @@ describe("app router (integration, in-memory SQLite)", () => {
     await expect(
       router.createCaller(anonCtx()).auth.login({
         siteUrl: "https://example.atlassian.net",
-        email: "mario@example.com",
-        apiToken: "wrong",
+        deployment: "cloud",
+        authType: "basic",
+        username: "mario@example.com",
+        secret: "wrong",
       }),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
@@ -224,10 +240,28 @@ describe("app router (integration, in-memory SQLite)", () => {
     expect(await caller.worklogs.list({ issueKey: "PRJ-1" })).toHaveLength(0);
   });
 
+  it("supports login against Jira Server/DC 8.x (username + password)", async () => {
+    const res = await router.createCaller(anonCtx()).auth.login({
+      siteUrl: "https://jira.example.it",
+      deployment: "server",
+      authType: "basic",
+      username: "mario.rossi",
+      secret: "password123",
+    });
+    expect(res.displayName).toBe("Mario Rossi");
+    // identified by username (name), not accountId
+    expect(res.accountId).toBe("mario.rossi");
+  });
+
   it("logs out and invalidates the session row", async () => {
     const caller = router.createCaller(authedCtx);
     await caller.auth.logout();
     const { sessions } = await import("@db/schema");
-    expect(await db.select().from(sessions)).toHaveLength(0);
+    const { eq } = await import("drizzle-orm");
+    const remaining = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, authedCtx.sessionId!));
+    expect(remaining).toHaveLength(0);
   });
 });

@@ -9,6 +9,11 @@ import {
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   siteUrl: text("site_url").notNull(),
+  /** "cloud" | "server" */
+  deployment: text("deployment").notNull().default("cloud"),
+  /** "basic" | "bearer" */
+  authType: text("auth_type").notNull().default("basic"),
+  /** Cloud: accountId. Server/DC: username (name/key) */
   accountId: text("account_id").notNull(),
   email: text("email").notNull(),
   displayName: text("display_name").notNull(),

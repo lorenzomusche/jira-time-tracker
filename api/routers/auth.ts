@@ -29,18 +29,25 @@ export const authRouter = createRouter({
           .string()
           .url()
           .transform((u) => u.replace(/\/+$/, "")),
-        email: z.string().email(),
-        apiToken: z.string().min(1),
+        deployment: z.enum(["cloud", "server"]).default("cloud"),
+        /** Cloud: email. Server/DC: username */
+        username: z.string().min(1),
+        /** Cloud: API token. Server: password (basic) or PAT (bearer) */
+        secret: z.string().min(1),
+        authType: z.enum(["basic", "bearer"]).default("basic"),
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const creds = {
+        siteUrl: input.siteUrl,
+        deployment: input.deployment,
+        authType: input.authType,
+        username: input.username,
+        secret: input.secret,
+      };
       let myself;
       try {
-        myself = await getMyself({
-          siteUrl: input.siteUrl,
-          email: input.email,
-          apiToken: input.apiToken,
-        });
+        myself = await getMyself(creds);
       } catch (err) {
         if (err instanceof JiraApiError && (err.status === 401 || err.status === 403)) {
           throw new TRPCError({
@@ -54,20 +61,25 @@ export const authRouter = createRouter({
         });
       }
 
+      // Cloud identifies users by accountId; Server/DC 8.x by username (name/key)
+      const accountId = myself.accountId ?? myself.name ?? myself.key ?? input.username;
+
       const db = getDb();
       const existing = await db
         .select()
         .from(users)
         .where(
-          and(eq(users.siteUrl, input.siteUrl), eq(users.accountId, myself.accountId)),
+          and(eq(users.siteUrl, input.siteUrl), eq(users.accountId, accountId)),
         )
         .limit(1);
 
       const values = {
-        email: input.email,
+        deployment: input.deployment,
+        authType: input.authType,
+        email: input.username,
         displayName: myself.displayName,
         avatarUrl: myself.avatarUrls?.["48x48"] ?? null,
-        encryptedToken: encrypt(input.apiToken),
+        encryptedToken: encrypt(input.secret),
       };
 
       let user;
@@ -79,7 +91,7 @@ export const authRouter = createRouter({
           .insert(users)
           .values({
             siteUrl: input.siteUrl,
-            accountId: myself.accountId,
+            accountId,
             ...values,
           })
           .returning();
