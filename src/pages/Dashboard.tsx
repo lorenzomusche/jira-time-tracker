@@ -16,6 +16,7 @@ import { trpc } from "@/providers/trpc";
 import { formatSeconds } from "@contracts/time";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QuickLog } from "@/components/QuickLog";
 
 const COLORS = [
   "hsl(var(--primary))",
@@ -74,6 +75,7 @@ export default function Dashboard() {
 
   return (
     <div className="grid gap-4">
+      <QuickLog />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map(({ title, value, icon: Icon }) => (
           <Card key={title}>

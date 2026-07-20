@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, CopyPlus } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { formatSeconds } from "@contracts/time";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 function startOfWeek(d: Date): Date {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -55,6 +56,50 @@ export default function Timesheet() {
 
   const weekTotal = days.reduce((acc, d) => acc + d.total, 0);
   const isCurrentWeek = weekOffset === 0;
+
+  const utils = trpc.useUtils();
+  const [duplicating, setDuplicating] = useState(false);
+  const create = trpc.worklogs.create.useMutation();
+
+  /** Duplicate all worklogs of a day onto today (same issues, durations, comments). */
+  const duplicateDay = async (
+    entries: { issueKey: string; timeSpentSeconds: number; comment: string }[],
+    fromLabel: string,
+  ) => {
+    if (entries.length === 0 || duplicating) return;
+    const total = entries.reduce((a, w) => a + w.timeSpentSeconds, 0);
+    if (
+      !window.confirm(
+        `Duplicare ${entries.length} worklog (${formatSeconds(total)}) da ${fromLabel} a oggi?`,
+      )
+    ) {
+      return;
+    }
+    setDuplicating(true);
+    let ok = 0;
+    try {
+      let cursor = Date.now();
+      for (const w of entries) {
+        await create.mutateAsync({
+          issueKey: w.issueKey,
+          timeSpent: formatSeconds(w.timeSpentSeconds),
+          started: new Date(cursor - w.timeSpentSeconds * 1000).toISOString(),
+          comment: w.comment,
+        });
+        cursor -= w.timeSpentSeconds * 1000; // back-to-back entries ending now
+        ok++;
+      }
+      toast.success(`${ok} worklog duplicati su oggi`);
+      utils.invalidate();
+    } catch (e) {
+      toast.error(
+        `Duplicati ${ok}/${entries.length}: ${e instanceof Error ? e.message : "errore"}`,
+      );
+      utils.invalidate();
+    } finally {
+      setDuplicating(false);
+    }
+  };
 
   return (
     <div className="grid gap-4">
@@ -106,8 +151,27 @@ export default function Timesheet() {
                         {d.date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" })}
                       </span>
                     </span>
-                    <span className={d.total >= DAILY_TARGET ? "text-green-600" : ""}>
-                      {formatSeconds(d.total)}
+                    <span className="flex items-center gap-1">
+                      {!isToday && d.entries.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          title="Duplica questa giornata su oggi"
+                          disabled={duplicating}
+                          onClick={() =>
+                            duplicateDay(
+                              d.entries,
+                              d.date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" }),
+                            )
+                          }
+                        >
+                          <CopyPlus className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <span className={d.total >= DAILY_TARGET ? "text-green-600" : ""}>
+                        {formatSeconds(d.total)}
+                      </span>
                     </span>
                   </CardTitle>
                   <Progress value={pct} className="h-1.5" />

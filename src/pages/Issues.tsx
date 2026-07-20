@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { ExternalLink, Search } from "lucide-react";
+import { Clock, ExternalLink, Search } from "lucide-react";
+import { LogTimeDialog } from "@/components/LogTimeDialog";
+import { Button } from "@/components/ui/button";
 import { trpc } from "@/providers/trpc";
 import { formatSeconds } from "@contracts/time";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TimerControls } from "@/components/TimerControls";
 import {
   Table,
   TableBody,
@@ -134,6 +137,24 @@ export default function Issues() {
                     </TableCell>
                     <TableCell className="text-right text-xs">
                       {i.timeSpentSeconds ? formatSeconds(i.timeSpentSeconds) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <TimerControls issueKey={i.key} />
+                        <LogTimeDialog
+                          issueKey={i.key}
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="Registra tempo"
+                            >
+                              <Clock className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
+                      </div>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <a href={i.url} target="_blank" rel="noreferrer">

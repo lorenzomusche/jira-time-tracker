@@ -8,11 +8,14 @@ Applicazione web full-stack per **catalogare le issue Jira assegnate** all'utent
 
 - **Login con credenziali Jira Cloud** (sito, email, API token) — il token è cifrato (AES-256-GCM) e salvato solo nel database locale
 - **Catalogo issue assegnate**: sync da Jira (`assignee = currentUser()`), ricerca full-text, filtri per stato e progetto, link diretto a Jira
+- **Consuntivazione rapida dalla dashboard**: cerca l'issue (ricerca nativa), tocca un preset di durata (15m/30m/1h/2h/4h/1d), invia — fatto. La data di inizio è calcolata automaticamente come "ora meno durata"
+- **Duplica giornata**: dalla timesheet copi tutti i worklog di un giorno su oggi con un click
 - **Fine tracking con timer live**: play / pausa / stop su ogni issue — allo stop il tempo tracciato (arrotondato al minuto) viene pre-caricato nel dialog di consuntivazione. Un solo timer attivo alla volta: avviandone uno gli altri vanno in pausa automaticamente. Badge sempre visibile nell'header
 - **Consuntivazione one-click**: registra tempo con sintassi Jira (`2h 30m`, `1d`, `45m`), modifica ed elimina worklog — tutto sincronizzato su Jira e archiviato in locale
 - **Dashboard**: ore oggi / settimana / mese, grafico ore ultimi 14 giorni, ripartizione per progetto, issue aperte
 - **Timesheet settimanale**: vista per giorno con totali e avanzamento verso le 8h
 - **Storage SQLite** zero-config: il database si auto-inizializza al primo avvio
+- **Dipendenze sfoltite**: solo i pacchetti strettamente necessari (componenti UI inutilizzati rimossi, niente MySQL), ricerca issue con `<datalist>` nativo invece di librerie autocomplete
 
 ## Avvio rapido
 

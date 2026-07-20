@@ -55,24 +55,39 @@ export function LogTimeDialog({
   };
   const [timeSpent, setTimeSpent] = useState("");
   const [started, setStarted] = useState("");
+  const [startedTouched, setStartedTouched] = useState(false);
   const [comment, setComment] = useState("");
   const utils = trpc.useUtils();
 
+  const PRESETS = ["15m", "30m", "1h", "2h", "4h", "1d"];
+
   useEffect(() => {
     if (open) {
+      setStartedTouched(false);
       if (worklog) {
         setTimeSpent(formatSeconds(worklog.timeSpentSeconds));
         setStarted(toLocalInputValue(new Date(worklog.started)));
         setComment(worklog.comment);
       } else {
         setTimeSpent(prefillSeconds ? formatSeconds(prefillSeconds) : "");
-        setStarted(toLocalInputValue(new Date()));
+        // Smart default: the work started "duration" ago
+        const base = prefillSeconds ?? 3600;
+        setStarted(toLocalInputValue(new Date(Date.now() - base * 1000)));
         setComment("");
       }
     }
   }, [open, worklog, prefillSeconds]);
 
   const parsed = parseDurationToSeconds(timeSpent);
+
+  // While creating, keep "started" in sync: now - duration (unless user edited it)
+  useEffect(() => {
+    if (!open || worklog || startedTouched) return;
+    if (parsed && parsed > 0) {
+      setStarted(toLocalInputValue(new Date(Date.now() - parsed * 1000)));
+    }
+  }, [parsed]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const invalid = timeSpent.trim().length > 0 && (!parsed || parsed <= 0);
 
   const onSuccess = () => {
@@ -123,6 +138,20 @@ export function LogTimeDialog({
               value={timeSpent}
               onChange={(e) => setTimeSpent(e.target.value)}
             />
+            <div className="flex flex-wrap gap-1">
+              {PRESETS.map((p) => (
+                <Button
+                  key={p}
+                  type="button"
+                  variant={timeSpent === p ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setTimeSpent(p)}
+                >
+                  {p}
+                </Button>
+              ))}
+            </div>
             {invalid && (
               <p className="text-xs text-destructive">
                 Formato non valido. Usa unità w (settimane), d (giorni), h (ore), m (minuti).
