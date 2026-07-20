@@ -86,6 +86,20 @@ CREATE TABLE IF NOT EXISTS settings (
   timer_alert_minutes INTEGER NOT NULL DEFAULT 120,
   notify_enabled INTEGER NOT NULL DEFAULT 1
 );
+CREATE TABLE IF NOT EXISTS outbox (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,
+  issue_key TEXT NOT NULL,
+  jira_worklog_id TEXT NOT NULL DEFAULT '',
+  time_spent_seconds INTEGER NOT NULL DEFAULT 0,
+  started INTEGER,
+  comment TEXT NOT NULL DEFAULT '',
+  attempts INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_outbox_user ON outbox(user_id);
 `;
 
 let instance: ReturnType<typeof createDb> | undefined;

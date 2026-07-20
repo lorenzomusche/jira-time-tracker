@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { createRouter, protectedProcedure, credentialsFor } from "../middleware";
 import { getDb } from "../queries/connection";
+import { replayOutbox } from "./outbox";
 import { issues, worklogs } from "@db/schema";
 import {
   fetchAssignedIssues,
@@ -67,7 +68,9 @@ export const issuesRouter = createRouter({
     for (const i of remote) {
       await upsertIssue(ctx.user.id, ctx.user.siteUrl, i);
     }
-    return { synced: remote.length, at: new Date() };
+    // Jira is reachable: flush any queued offline worklog operations.
+    const outboxResult = await replayOutbox(ctx.user.id, creds);
+    return { synced: remote.length, at: new Date(), outbox: outboxResult };
   }),
 
   /** Global Jira search (any issue, not only assigned). Not stored locally. */

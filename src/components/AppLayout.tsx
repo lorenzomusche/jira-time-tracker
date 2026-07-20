@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { ActiveTimerChip } from "@/components/TimerControls";
 import { ModeToggle } from "@/components/ModeToggle";
 import { CommandPalette } from "@/components/CommandPalette";
+import { OutboxBanner } from "@/components/OutboxBanner";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -139,6 +140,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
+      <OutboxBanner />
       <main className="mx-auto max-w-7xl p-4 md:p-6">{children}</main>
       <CommandPalette />
     </div>

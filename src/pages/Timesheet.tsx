@@ -272,7 +272,14 @@ export default function Timesheet() {
                         >
                         <div className="flex justify-between font-medium">
                           <span className="font-mono">{w.issueKey}</span>
-                          <span>{formatSeconds(w.timeSpentSeconds)}</span>
+                          <span className="flex items-center gap-1.5">
+                            {w.jiraWorklogId.startsWith("pending-") && (
+                              <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                                in coda
+                              </span>
+                            )}
+                            {formatSeconds(w.timeSpentSeconds)}
+                          </span>
                         </div>
                         {w.comment && (
                           <div className="mt-0.5 line-clamp-2 text-muted-foreground">

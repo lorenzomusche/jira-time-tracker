@@ -146,4 +146,33 @@ export type Session = typeof sessions.$inferSelect;
 export type Issue = typeof issues.$inferSelect;
 export type Worklog = typeof worklogs.$inferSelect;
 export type Timer = typeof timers.$inferSelect;
+/**
+ * Offline outbox: worklog operations queued while Jira is unreachable.
+ * kind: "create" | "update" | "delete"
+ */
+export const outbox = sqliteTable(
+  "outbox",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    issueKey: text("issue_key").notNull(),
+    /** Real Jira worklog id for update/delete; "" for create */
+    jiraWorklogId: text("jira_worklog_id").notNull().default(""),
+    timeSpentSeconds: integer("time_spent_seconds").notNull().default(0),
+    started: integer("started", { mode: "timestamp_ms" }),
+    comment: text("comment").notNull().default(""),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error").notNull().default(""),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [index("idx_outbox_user").on(t.userId)],
+);
+
+export type OutboxEntry = typeof outbox.$inferSelect;
+
 export type Settings = typeof settings.$inferSelect;

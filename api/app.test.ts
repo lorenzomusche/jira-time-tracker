@@ -534,6 +534,126 @@ describe("app router (integration, in-memory SQLite)", () => {
     });
   });
 
+  describe("outbox (offline queue)", () => {
+    const offline = async () => {
+      throw new TypeError("fetch failed");
+    };
+
+    it("queues create when Jira is unreachable and replays it later", async () => {
+      const caller = router.createCaller(authedCtx);
+      (fetch as ReturnType<typeof vi.fn>).mockImplementationOnce(offline);
+      const row = await caller.worklogs.create({
+        issueKey: "OPS-7",
+        timeSpent: "1h 30m",
+        started: new Date("2026-07-20T09:00:00Z").toISOString(),
+        comment: "lavoro offline",
+      });
+      expect(row.jiraWorklogId.startsWith("pending-")).toBe(true);
+      expect(row.timeSpentSeconds).toBe(5400);
+
+      let pending = await caller.outbox.list();
+      expect(pending).toHaveLength(1);
+      expect(pending[0].kind).toBe("create");
+      expect(pending[0].issueKey).toBe("OPS-7");
+
+      // visible in the local worklog list while pending
+      const local = await caller.worklogs.list({ issueKey: "OPS-7" });
+      expect(local.some((w) => w.jiraWorklogId === row.jiraWorklogId)).toBe(true);
+
+      // Jira back: manual replay flushes the queue
+      const res = await caller.outbox.retry();
+      expect(res.synced).toBe(1);
+      expect(res.remaining).toBe(0);
+      pending = await caller.outbox.list();
+      expect(pending).toHaveLength(0);
+
+      // the local row now carries the real Jira id
+      const after = await caller.worklogs.list({ issueKey: "OPS-7" });
+      expect(after.some((w) => w.jiraWorklogId.startsWith("pending-"))).toBe(false);
+      expect(
+        after.some((w) => w.jiraWorklogId === "wl-1" && w.comment === "lavoro offline"),
+      ).toBe(true);
+    });
+
+    it("updates and deletes a pending worklog without touching Jira", async () => {
+      const caller = router.createCaller(authedCtx);
+      (fetch as ReturnType<typeof vi.fn>).mockImplementationOnce(offline);
+      const row = await caller.worklogs.create({
+        issueKey: "OPS-7",
+        timeSpent: "30m",
+        started: new Date("2026-07-20T14:00:00Z").toISOString(),
+        comment: "bozza",
+      });
+      const callsBefore = (fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+
+      const updated = await caller.worklogs.update({
+        issueKey: "OPS-7",
+        jiraWorklogId: row.jiraWorklogId,
+        timeSpent: "45m",
+        started: new Date("2026-07-20T14:30:00Z").toISOString(),
+        comment: "bozza corretta",
+      });
+      expect(updated.timeSpentSeconds).toBe(2700);
+      // no Jira call happened for the pending update
+      expect((fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsBefore);
+      const ops = await caller.outbox.list();
+      expect(ops).toHaveLength(1);
+      expect(ops[0].timeSpentSeconds).toBe(2700);
+      expect(ops[0].comment).toBe("bozza corretta");
+
+      await caller.worklogs.delete({
+        issueKey: "OPS-7",
+        jiraWorklogId: row.jiraWorklogId,
+      });
+      expect(await caller.outbox.list()).toHaveLength(0);
+      const local = await caller.worklogs.list({ issueKey: "OPS-7" });
+      expect(local.some((w) => w.jiraWorklogId === row.jiraWorklogId)).toBe(false);
+    });
+
+    it("queues delete when offline and tolerates 404 on replay", async () => {
+      const caller = router.createCaller(authedCtx);
+      const row = await caller.worklogs.create({
+        issueKey: "OPS-7",
+        timeSpent: "20m",
+        started: new Date("2026-07-20T16:00:00Z").toISOString(),
+        comment: "da eliminare",
+      });
+      expect(row.jiraWorklogId).toBe("wl-1");
+
+      (fetch as ReturnType<typeof vi.fn>).mockImplementationOnce(offline);
+      await caller.worklogs.delete({ issueKey: "OPS-7", jiraWorklogId: "wl-1" });
+      const ops = await caller.outbox.list();
+      expect(ops).toHaveLength(1);
+      expect(ops[0].kind).toBe("delete");
+      const local = await caller.worklogs.list({ issueKey: "OPS-7" });
+      expect(local.some((w) => w.jiraWorklogId === "wl-1")).toBe(false);
+
+      // Replay: Jira answers 404 (already deleted there) → entry cleared
+      (fetch as ReturnType<typeof vi.fn>).mockImplementationOnce(async () =>
+        jsonResponse({ errorMessages: ["not found"] }, 404),
+      );
+      const res = await caller.outbox.retry();
+      expect(res.remaining).toBe(0);
+      expect(await caller.outbox.list()).toHaveLength(0);
+    });
+
+    it("flushes the queue automatically on issue sync", async () => {
+      const caller = router.createCaller(authedCtx);
+      (fetch as ReturnType<typeof vi.fn>).mockImplementationOnce(offline);
+      await caller.worklogs.create({
+        issueKey: "PRJ-1",
+        timeSpent: "15m",
+        started: new Date("2026-07-20T18:00:00Z").toISOString(),
+        comment: "auto replay",
+      });
+      expect(await caller.outbox.list()).toHaveLength(1);
+
+      const res = await caller.issues.sync();
+      expect(res.outbox.remaining).toBe(0);
+      expect(await caller.outbox.list()).toHaveLength(0);
+    });
+  });
+
   it("logs out and invalidates the session row", async () => {
     const caller = router.createCaller(authedCtx);
     await caller.auth.logout();
