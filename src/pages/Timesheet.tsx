@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { GoalRing } from "@/components/GoalRing";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
@@ -21,12 +22,51 @@ function startOfWeek(d: Date): Date {
 
 const DAY_NAMES = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 
 export default function Timesheet() {
   const [weekOffset, setWeekOffset] = useState(0);
+  const [view, setView] = useState<"week" | "month">("week");
+  const [monthOffset, setMonthOffset] = useState(0);
   const settings = trpc.settings.get.useQuery();
   const dailyTarget = settings.data?.dailyTargetSeconds ?? 8 * 3600;
   const [selected, setSelected] = useState<Set<number>>(new Set());
+
+  const switchView = (v: "week" | "month") => {
+    setView(v);
+    setSelected(new Set());
+  };
+
+  const monthCursor = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  }, [monthOffset]);
+
+  const gridStart = useMemo(() => startOfWeek(monthCursor), [monthCursor]);
+  const gridEnd = useMemo(() => {
+    const d = new Date(gridStart);
+    d.setDate(d.getDate() + 42);
+    return d;
+  }, [gridStart]);
+
+  const navPrev = () =>
+    view === "week" ? setWeekOffset((w) => w - 1) : setMonthOffset((m) => m - 1);
+  const navNext = () =>
+    view === "week" ? setWeekOffset((w) => w + 1) : setMonthOffset((m) => m + 1);
+  const navToday = () => {
+    setWeekOffset(0);
+    setMonthOffset(0);
+  };
+
+  /** Jump from a month-grid day to the week containing it. */
+  const jumpToWeek = (date: Date) => {
+    const diff = startOfWeek(date).getTime() - startOfWeek(new Date()).getTime();
+    setWeekOffset(Math.round(diff / (7 * 86400000)));
+    setView("week");
+  };
 
   const weekStart = useMemo(() => {
     const d = startOfWeek(new Date());
@@ -41,26 +81,38 @@ export default function Timesheet() {
   }, [weekStart]);
 
   const logs = trpc.worklogs.list.useQuery({
-    from: weekStart.toISOString(),
-    to: weekEnd.toISOString(),
+    from: (view === "week" ? weekStart : gridStart).toISOString(),
+    to: (view === "week" ? weekEnd : gridEnd).toISOString(),
   });
 
   const days = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
       const date = new Date(weekStart);
       date.setDate(date.getDate() + i);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-      const entries = (logs.data ?? []).filter((w) => {
-        const s = new Date(w.started);
-        const k = `${s.getFullYear()}-${String(s.getMonth() + 1).padStart(2, "0")}-${String(s.getDate()).padStart(2, "0")}`;
-        return k === key;
-      });
+      const key = dayKey(date);
+      const entries = (logs.data ?? []).filter((w) => dayKey(new Date(w.started)) === key);
       const total = entries.reduce((acc, w) => acc + w.timeSpentSeconds, 0);
       return { date, key, entries, total };
     });
   }, [weekStart, logs.data]);
 
   const weekTotal = days.reduce((acc, d) => acc + d.total, 0);
+
+  /** 42 celle (6 settimane) per la griglia mensile. */
+  const monthCells = useMemo(() => {
+    return Array.from({ length: 42 }, (_, i) => {
+      const date = new Date(gridStart);
+      date.setDate(date.getDate() + i);
+      const key = dayKey(date);
+      const entries = (logs.data ?? []).filter((w) => dayKey(new Date(w.started)) === key);
+      const total = entries.reduce((acc, w) => acc + w.timeSpentSeconds, 0);
+      return { date, key, entries, total, inMonth: date.getMonth() === monthCursor.getMonth() };
+    });
+  }, [gridStart, monthCursor, logs.data]);
+
+  const monthTotal = monthCells
+    .filter((c) => c.inMonth)
+    .reduce((acc, c) => acc + c.total, 0);
 
   const del = trpc.worklogs.delete.useMutation();
   const toggleSelect = (id: number) => {
@@ -103,7 +155,9 @@ export default function Timesheet() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `timesheet-${weekStart.toISOString().slice(0, 10)}.csv`;
+    a.download = view === "week"
+      ? `timesheet-${weekStart.toISOString().slice(0, 10)}.csv`
+      : `timesheet-${monthCursor.toISOString().slice(0, 7)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success(`Esportati ${rows.length} worklog`);
@@ -158,29 +212,61 @@ export default function Timesheet() {
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setWeekOffset((w) => w - 1)}>
+          <Button variant="outline" size="icon" onClick={navPrev}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setWeekOffset(0)}
-            disabled={isCurrentWeek}
+            onClick={navToday}
+            disabled={view === "week" ? isCurrentWeek : monthOffset === 0}
           >
             Oggi
           </Button>
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setWeekOffset((w) => w + 1)}
-            disabled={weekOffset >= 0}
+            onClick={navNext}
+            disabled={view === "week" ? weekOffset >= 0 : monthOffset >= 0}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <h2 className="text-sm font-medium text-muted-foreground">
-          Settimana del {weekStart.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })}
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-medium capitalize text-muted-foreground">
+            {view === "week"
+              ? `Settimana del ${weekStart.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })}`
+              : monthCursor.toLocaleDateString("it-IT", { month: "long", year: "numeric" })}
+          </h2>
+          <div className="flex rounded-full border p-0.5" role="tablist" aria-label="Vista">
+            <button
+              role="tab"
+              aria-selected={view === "week"}
+              onClick={() => switchView("week")}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                view === "week"
+                  ? "gradient-brand text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Settimana
+            </button>
+            <button
+              role="tab"
+              aria-selected={view === "month"}
+              onClick={() => switchView("month")}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                view === "month"
+                  ? "gradient-brand text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Mese
+            </button>
+          </div>
+        </div>
         <div className="flex items-center gap-3">
           {selected.size > 0 && (
             <Button variant="destructive" size="sm" onClick={deleteSelected} disabled={del.isPending}>
@@ -197,7 +283,11 @@ export default function Timesheet() {
             <Download className="mr-1.5 h-4 w-4" />
             Esporta CSV
           </Button>
-          {settings.data ? (
+          {view === "month" ? (
+            <div className="text-sm font-semibold">
+              Mese: {formatSeconds(monthTotal)}
+            </div>
+          ) : settings.data ? (
             <GoalRing
               current={weekTotal}
               target={settings.data.weeklyTargetSeconds}
@@ -212,6 +302,71 @@ export default function Timesheet() {
 
       {logs.isLoading ? (
         <Skeleton className="h-96" />
+      ) : view === "month" ? (
+        <div className="grid gap-2">
+          <div className="grid grid-cols-7 gap-2">
+            {DAY_NAMES.map((n) => (
+              <div
+                key={n}
+                className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+              >
+                {n}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-2">
+            {monthCells.map((c) => {
+              const pct = Math.min(100, Math.round((c.total / dailyTarget) * 100));
+              const isToday = c.date.toDateString() === new Date().toDateString();
+              const hasPending = c.entries.some((w) =>
+                w.jiraWorklogId.startsWith("pending-"),
+              );
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => jumpToWeek(c.date)}
+                  title={`Apri la settimana del ${c.date.toLocaleDateString("it-IT")}`}
+                  className={cn(
+                    "flex min-h-24 flex-col rounded-lg border bg-card p-2 text-left transition-all hover:border-primary/40 hover:shadow-sm",
+                    !c.inMonth && "opacity-40",
+                    isToday && "border-primary ring-1 ring-primary/30",
+                  )}
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={cn("font-medium", isToday && "text-primary")}>
+                      {c.date.getDate()}
+                    </span>
+                    {hasPending && (
+                      <span
+                        className="h-1.5 w-1.5 rounded-full bg-amber-500"
+                        title="Modifiche in coda di sincronizzazione"
+                      />
+                    )}
+                  </div>
+                  {c.total > 0 ? (
+                    <>
+                      <span
+                        className={cn(
+                          "mt-1 text-sm font-semibold",
+                          c.total >= dailyTarget && "text-[hsl(var(--success))]",
+                        )}
+                      >
+                        {formatSeconds(c.total)}
+                      </span>
+                      <Progress value={pct} className="mt-1 h-1" />
+                      <span className="mt-1 text-[10px] text-muted-foreground">
+                        {c.entries.length}{" "}
+                        {c.entries.length === 1 ? "registrazione" : "registrazioni"}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="mt-auto text-[10px] text-muted-foreground/50">—</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {days.map((d, i) => {
