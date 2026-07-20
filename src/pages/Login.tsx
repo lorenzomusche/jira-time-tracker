@@ -54,134 +54,148 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Clock className="h-6 w-6 text-primary" />
+    <div className="mesh-bg flex min-h-screen items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="mb-8 text-center">
+          <div className="gradient-brand mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl shadow-xl shadow-primary/30">
+            <Clock className="h-7 w-7 text-white" strokeWidth={2.5} />
           </div>
-          <CardTitle className="text-2xl">Jira Time Tracker</CardTitle>
-          <CardDescription>
-            Accedi con il tuo account Jira per catalogare le issue assegnate e
-            consuntivare il tempo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="grid gap-4">
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant={deployment === "server" ? "default" : "outline"}
-                onClick={() => setDeployment("server")}
-              >
-                Jira Server / DC
-              </Button>
-              <Button
-                type="button"
-                variant={deployment === "cloud" ? "default" : "outline"}
-                onClick={() => setDeployment("cloud")}
-              >
-                Jira Cloud
-              </Button>
-            </div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            Tempo
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Consuntivazione Jira, senza attrito.
+          </p>
+        </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="site">URL di Jira</Label>
-              <Input
-                id="site"
-                placeholder={
-                  deployment === "server"
-                    ? "https://jira.azienda.it"
-                    : "https://azienda.atlassian.net"
-                }
-                value={siteUrl}
-                onChange={(e) => setSiteUrl(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="username">
-                {deployment === "server" ? "Username" : "Email Atlassian"}
-              </Label>
-              <Input
-                id="username"
-                type={deployment === "cloud" ? "email" : "text"}
-                placeholder={deployment === "server" ? "mario.rossi" : "nome@azienda.com"}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                required
-              />
-            </div>
-
-            {deployment === "server" && (
-              <div className="grid gap-2">
-                <Label>Metodo di autenticazione</Label>
-                <Select value={authType} onValueChange={(v) => setAuthType(v as AuthType)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="basic">Password (Basic auth)</SelectItem>
-                    <SelectItem value="bearer">
-                      Personal Access Token (Jira DC 8.14+)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="grid gap-2">
-              <Label htmlFor="secret">
-                {deployment === "cloud"
-                  ? "API Token"
-                  : authType === "bearer"
-                    ? "Personal Access Token"
-                    : "Password"}
-              </Label>
-              <Input
-                id="secret"
-                type="password"
-                placeholder="••••••••••••"
-                value={secret}
-                onChange={(e) => setSecret(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
-              {deployment === "cloud" ? (
-                <a
-                  href="https://id.atlassian.com/manage-profile/security/api-tokens"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+        <Card className="border-0 shadow-2xl shadow-primary/10">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Accedi a Jira</CardTitle>
+            <CardDescription>
+              Cataloga le issue assegnate e registra il tempo in un click.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={submit} className="grid gap-4">
+              <div className="grid grid-cols-2 gap-1 rounded-lg border bg-muted/50 p-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={deployment === "server" ? "bg-background shadow-sm" : ""}
+                  onClick={() => setDeployment("server")}
                 >
-                  Crea un API token su Atlassian
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  {authType === "bearer"
-                    ? "Il PAT si crea in Jira: Profilo → Personal Access Tokens (richiede Jira Data Center 8.14+)."
-                    : "La password viene usata solo per le chiamate API e salvata cifrata in locale. Se hai Jira Data Center 8.14+, preferisci il Personal Access Token."}
+                  Server / DC
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={deployment === "cloud" ? "bg-background shadow-sm" : ""}
+                  onClick={() => setDeployment("cloud")}
+                >
+                  Cloud
+                </Button>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="site">URL di Jira</Label>
+                <Input
+                  id="site"
+                  placeholder={
+                    deployment === "server"
+                      ? "https://jira.azienda.it"
+                      : "https://azienda.atlassian.net"
+                  }
+                  value={siteUrl}
+                  onChange={(e) => setSiteUrl(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="username">
+                  {deployment === "server" ? "Username" : "Email Atlassian"}
+                </Label>
+                <Input
+                  id="username"
+                  type={deployment === "cloud" ? "email" : "text"}
+                  placeholder={deployment === "server" ? "mario.rossi" : "nome@azienda.com"}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  required
+                />
+              </div>
+
+              {deployment === "server" && (
+                <div className="grid gap-2">
+                  <Label>Metodo di autenticazione</Label>
+                  <Select value={authType} onValueChange={(v) => setAuthType(v as AuthType)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="basic">Password (Basic auth)</SelectItem>
+                      <SelectItem value="bearer">
+                        Personal Access Token (DC 8.14+)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="grid gap-2">
+                <Label htmlFor="secret">
+                  {deployment === "cloud"
+                    ? "API Token"
+                    : authType === "bearer"
+                      ? "Personal Access Token"
+                      : "Password"}
+                </Label>
+                <Input
+                  id="secret"
+                  type="password"
+                  placeholder="••••••••••••"
+                  value={secret}
+                  onChange={(e) => setSecret(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+                {deployment === "cloud" ? (
+                  <a
+                    href="https://id.atlassian.com/manage-profile/security/api-tokens"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    Crea un API token su Atlassian
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {authType === "bearer"
+                      ? "Il PAT si crea in Jira: Profilo → Personal Access Tokens."
+                      : "La password è usata solo per le API e salvata cifrata in locale."}
+                  </p>
+                )}
+              </div>
+
+              {error && (
+                <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
                 </p>
               )}
-            </div>
-
-            {error && (
-              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {error}
+              <Button type="submit" disabled={login.isPending} className="w-full">
+                {login.isPending ? "Verifica credenziali…" : "Accedi"}
+              </Button>
+              <p className="text-center text-xs text-muted-foreground">
+                Le credenziali sono cifrate e restano nel database locale.
               </p>
-            )}
-            <Button type="submit" disabled={login.isPending} className="w-full">
-              {login.isPending ? "Verifica credenziali..." : "Accedi"}
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              Le credenziali sono cifrate e salvate solo nel database locale.
-            </p>
-          </form>
-        </CardContent>
-      </Card>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

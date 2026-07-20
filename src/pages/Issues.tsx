@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { TimerControls } from "@/components/TimerControls";
 import { FavoriteStar } from "@/components/FavoriteStar";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -38,12 +39,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-
-function statusVariant(category: string): "default" | "secondary" | "outline" {
-  if (category === "Done") return "secondary";
-  if (category === "In Progress") return "default";
-  return "outline";
-}
 
 const PRIORITY_ORDER = ["Highest", "High", "Medium", "Low", "Lowest"];
 type SortMode = "recent" | "priority" | "label";
@@ -109,6 +104,21 @@ export default function Issues() {
   );
 
   const data = query.data;
+
+  // Prefetch next page for instant navigation
+  useEffect(() => {
+    if (data && page < data.totalPages) {
+      utils.issues.list.prefetch({
+        search: search || undefined,
+        status: status === "all" ? undefined : status,
+        projectKey: project === "all" ? undefined : project,
+        label: label === "all" ? undefined : label,
+        favoriteOnly: favOnly || undefined,
+        page: page + 1,
+        pageSize: 25,
+      });
+    }
+  }, [data, page, search, status, project, label, favOnly, utils]);
 
   const sorted = useMemo(() => {
     const rows = [...(data?.issues ?? [])];
@@ -247,7 +257,7 @@ export default function Issues() {
                   >
                     <span className="font-mono text-xs font-medium">{r.key}</span>
                     <span className="min-w-0 flex-1 truncate">{r.summary}</span>
-                    <Badge variant={statusVariant(r.statusCategory)}>{r.status}</Badge>
+                    <StatusBadge status={r.status} category={r.statusCategory} />
                     {!r.isMine && (
                       <Badge variant="outline" className="text-amber-600">
                         {r.assignee ? `di ${r.assignee}` : "non assegnata"}
@@ -310,7 +320,7 @@ export default function Issues() {
                 {sorted.map((i) => (
                   <TableRow
                     key={i.key}
-                    className="cursor-pointer"
+                    className="cursor-pointer transition-colors hover:bg-accent/60"
                     onClick={() => navigate(`/issues/${i.key}`)}
                   >
                     <TableCell className="font-mono text-xs font-medium">
@@ -345,7 +355,7 @@ export default function Issues() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusVariant(i.statusCategory)}>{i.status}</Badge>
+                      <StatusBadge status={i.status} category={i.statusCategory} />
                     </TableCell>
                     <TableCell className="text-xs">{i.priority || "—"}</TableCell>
                     <TableCell className="text-right text-xs">

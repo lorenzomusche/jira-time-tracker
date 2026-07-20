@@ -1,7 +1,8 @@
 import { Link, NavLink, useNavigate } from "react-router";
-import { Clock, LayoutDashboard, ListTodo, CalendarDays, KanbanSquare, LogOut, RefreshCw } from "lucide-react";
+import { Clock, LayoutDashboard, ListTodo, CalendarDays, KanbanSquare, LogOut, RefreshCw, Search } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { useAuth } from "@/hooks/useAuth";
+import { useHotkeys } from "@/hooks/useHotkeys";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +17,6 @@ import { toast } from "sonner";
 import { ActiveTimerChip } from "@/components/TimerControls";
 import { ModeToggle } from "@/components/ModeToggle";
 import { CommandPalette } from "@/components/CommandPalette";
-import { Search } from "lucide-react";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -27,6 +27,7 @@ const navItems = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  useHotkeys();
   const navigate = useNavigate();
   const utils = trpc.useUtils();
   const logout = trpc.auth.logout.useMutation({
@@ -45,28 +46,32 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+    <div className="min-h-screen">
+      <header className="glass sticky top-0 z-40">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4">
-          <Link to="/" className="flex items-center gap-2 font-semibold">
-            <Clock className="h-5 w-5 text-primary" />
-            Jira Time Tracker
+          <Link to="/" className="group flex items-center gap-2.5">
+            <span className="gradient-brand flex h-8 w-8 items-center justify-center rounded-lg shadow-md shadow-primary/25 transition-transform group-hover:scale-105">
+              <Clock className="h-4.5 w-4.5 text-white" strokeWidth={2.5} />
+            </span>
+            <span className="font-display text-lg font-semibold tracking-tight">
+              Tempo
+            </span>
           </Link>
-          <nav className="ml-6 flex items-center gap-1">
+          <nav className="ml-4 flex items-center gap-0.5 rounded-full border bg-muted/60 p-1">
             {navItems.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={to === "/"}
                 className={({ isActive }) =>
-                  `flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors ${
+                  `flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
                     isActive
-                      ? "bg-primary/10 font-medium text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      ? "bg-background text-primary shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                   }`
                 }
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5" />
                 {label}
               </NavLink>
             ))}
@@ -78,29 +83,30 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   new KeyboardEvent("keydown", { key: "k", ctrlKey: true }),
                 )
               }
-              className="hidden items-center gap-2 rounded-md border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent sm:flex"
+              className="hidden items-center gap-2 rounded-full border bg-muted/60 px-3.5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground sm:flex"
             >
               <Search className="h-3.5 w-3.5" />
               Cerca…
-              <kbd className="rounded border bg-background px-1 text-[10px]">⌘K</kbd>
+              <kbd className="rounded-md border bg-background px-1.5 text-[10px] font-medium">⌘K</kbd>
             </button>
             <ActiveTimerChip />
-            <ModeToggle />
             <Button
               variant="outline"
               size="sm"
+              className="rounded-full"
               onClick={() => sync.mutate()}
               disabled={sync.isPending}
             >
-              <RefreshCw className={`mr-1.5 h-4 w-4 ${sync.isPending ? "animate-spin" : ""}`} />
-              Sync Jira
+              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${sync.isPending ? "animate-spin" : ""}`} />
+              Sync
             </Button>
+            <ModeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-8 w-8 ring-2 ring-primary/20">
                     {user?.avatarUrl && <AvatarImage src={user.avatarUrl} />}
-                    <AvatarFallback>
+                    <AvatarFallback className="gradient-brand text-xs font-semibold text-white">
                       {user?.displayName?.slice(0, 2).toUpperCase() ?? "??"}
                     </AvatarFallback>
                   </Avatar>

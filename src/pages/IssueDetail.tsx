@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams, Link } from "react-router";
 import { ArrowLeft, ExternalLink, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { trpc } from "@/providers/trpc";
@@ -27,6 +28,18 @@ export default function IssueDetail() {
   const { key = "" } = useParams();
   const utils = trpc.useUtils();
   const issue = trpc.issues.get.useQuery({ key });
+
+  // Hotkey: "l" opens the log-time dialog
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.key !== "l" || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      document.getElementById("log-time-trigger")?.click();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const logs = trpc.worklogs.list.useQuery({ issueKey: key });
 
   const syncLogs = trpc.worklogs.syncIssue.useMutation({
@@ -133,9 +146,10 @@ export default function IssueDetail() {
             <LogTimeDialog
               issueKey={key}
               trigger={
-                <Button size="sm">
+                <Button size="sm" id="log-time-trigger">
                   <Plus className="mr-1.5 h-4 w-4" />
                   Registra tempo
+                  <kbd className="ml-1.5 rounded border border-primary-foreground/30 px-1 text-[10px]">L</kbd>
                 </Button>
               }
             />

@@ -55,7 +55,7 @@ export function QuickLog() {
   };
 
   return (
-    <Card>
+    <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.04] to-transparent">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Zap className="h-4 w-4 text-primary" />

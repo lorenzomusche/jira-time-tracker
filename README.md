@@ -4,12 +4,20 @@ Applicazione web full-stack per **catalogare le issue Jira assegnate** all'utent
 
 ![Stack](https://img.shields.io/badge/stack-React%2019%20%C2%B7%20tRPC%20%C2%B7%20Hono%20%C2%B7%20Drizzle%20%C2%B7%20SQLite-blue)
 
+## Design
+
+- **Tema "Tempo"**: brand indigo-violet con gradienti, mesh background animato, dark mode curata
+- **Tipografia**: Space Grotesk per i titoli, Inter per il corpo (font variabili bundle, nessuna CDN)
+- **Micro-dettagli**: glass header con blur, badge di stato semantici, hover con profondità, timer con pallino pulsante
+- **Tastiera-first**: ⌘K command palette, `g d/i/t/b` per navigare, `l` per registrare tempo dal dettaglio issue
+
 ## Funzionalità
 
 - **Login con credenziali Jira Cloud** (sito, email, API token) — il token è cifrato (AES-256-GCM) e salvato solo nel database locale
 - **Catalogo issue assegnate**: sync da Jira (`assignee = currentUser()`), ricerca full-text, filtri per stato/progetto/label, ordinamento per priorità o label, link diretto a Jira
 - **Ricerca globale Jira**: cerca qualsiasi issue (anche non tua) per chiave o testo e importala nel catalogo solo se ti serve
 - **Pulizia catalogo**: un click elimina le issue locali senza storico di tracking (su Jira non cambia nulla)
+- **Hotkey di navigazione**: `g d/i/t/b` per navigare, `l` log time sul dettaglio; prefetch della pagina successiva
 - **Command palette ⌘K**: salta a qualsiasi issue, naviga, sincronizza e cambia tema senza toccare il mouse
 - **Veloce di default**: paginazione server-side, ricerca con debounce, cache react-query (staleTime 30s, no refetch al focus)
 - **Issue preferite** ⭐: stella su ogni issue, sempre in cima alla lista, filtro dedicato, chip rapide nella consuntivazione rapida — e la pulizia catalogo le preserva

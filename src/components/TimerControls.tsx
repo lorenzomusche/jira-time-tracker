@@ -77,11 +77,18 @@ export function TimerControls({ issueKey }: { issueKey: string }) {
   return (
     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
       {timer && (
-        <TickingElapsed
-          state={timer.state}
-          elapsedSeconds={timer.elapsedSeconds}
-          className={`mr-1 text-xs ${running ? "text-green-600" : "text-amber-600"}`}
-        />
+        <span className="mr-1 flex items-center gap-1.5">
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              running ? "bg-[hsl(var(--success))] animate-pulse-dot" : "bg-[hsl(var(--warning))]"
+            }`}
+          />
+          <TickingElapsed
+            state={timer.state}
+            elapsedSeconds={timer.elapsedSeconds}
+            className={`text-xs font-semibold ${running ? "text-[hsl(var(--success))]" : "text-[hsl(var(--warning))]"}`}
+          />
+        </span>
       )}
       {!running ? (
         <Button
@@ -144,7 +151,9 @@ export function ActiveTimerChip() {
     <a
       href={`/issues/${timer.issueKey}`}
       className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors hover:bg-accent ${
-        timer.state === "running" ? "border-green-600/40 text-green-700" : "border-amber-600/40 text-amber-700"
+        timer.state === "running"
+          ? "border-[hsl(var(--success)/0.4)] text-[hsl(var(--success))]"
+          : "border-[hsl(var(--warning)/0.4)] text-[hsl(var(--warning))]"
       }`}
       title={timer.state === "running" ? "Timer attivo" : "Timer in pausa"}
     >

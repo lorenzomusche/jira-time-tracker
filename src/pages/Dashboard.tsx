@@ -67,26 +67,48 @@ export default function Dashboard() {
   }));
 
   const cards = [
-    { title: "Oggi", value: formatSeconds(s.todaySeconds), icon: CalendarClock },
-    { title: "Questa settimana", value: formatSeconds(s.weekSeconds), icon: CalendarDays },
-    { title: "Questo mese", value: formatSeconds(s.monthSeconds), icon: CalendarRange },
-    { title: "Issue aperte", value: String(s.openIssueCount), icon: ListTodo },
+    {
+      title: "Oggi",
+      value: formatSeconds(s.todaySeconds),
+      icon: CalendarClock,
+      chip: "bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))]",
+    },
+    {
+      title: "Questa settimana",
+      value: formatSeconds(s.weekSeconds),
+      icon: CalendarDays,
+      chip: "bg-[hsl(var(--info)/0.15)] text-[hsl(var(--info))]",
+    },
+    {
+      title: "Questo mese",
+      value: formatSeconds(s.monthSeconds),
+      icon: CalendarRange,
+      chip: "bg-primary/10 text-primary",
+    },
+    {
+      title: "Issue aperte",
+      value: String(s.openIssueCount),
+      icon: ListTodo,
+      chip: "bg-[hsl(var(--warning)/0.15)] text-[hsl(var(--warning))]",
+    },
   ];
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-5">
       <QuickLog />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map(({ title, value, icon: Icon }) => (
-          <Card key={title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {title}
-              </CardTitle>
-              <Icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{value}</div>
+        {cards.map(({ title, value, icon: Icon, chip }) => (
+          <Card key={title} className="card-hover">
+            <CardContent className="flex items-center gap-3 p-4">
+              <span className={`stat-icon ${chip}`}>
+                <Icon className="h-4.5 w-4.5" />
+              </span>
+              <div>
+                <div className="text-xs font-medium text-muted-foreground">{title}</div>
+                <div className="font-display text-xl font-semibold tracking-tight">
+                  {value}
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -95,7 +117,7 @@ export default function Dashboard() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Ore registrate — ultimi 14 giorni</CardTitle>
+            <CardTitle className="font-display text-base">Ore registrate — ultimi 14 giorni</CardTitle>
           </CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -104,7 +126,13 @@ export default function Dashboard() {
                 <XAxis dataKey="day" fontSize={12} />
                 <YAxis fontSize={12} unit="h" />
                 <Tooltip formatter={(v) => [`${v}h`, "Ore"]} />
-                <Bar dataKey="ore" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <defs>
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(262 83% 58%)" />
+                    <stop offset="100%" stopColor="hsl(292 75% 55%)" />
+                  </linearGradient>
+                </defs>
+                <Bar dataKey="ore" fill="url(#barGradient)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -112,7 +140,7 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Ore per progetto — questo mese</CardTitle>
+            <CardTitle className="font-display text-base">Ore per progetto — questo mese</CardTitle>
           </CardHeader>
           <CardContent className="h-72">
             {projectData.length === 0 ? (

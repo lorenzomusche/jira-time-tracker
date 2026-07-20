@@ -86,9 +86,20 @@ export default function Board() {
           onDragLeave={() => setDragOver((v) => (v === col.status ? null : v))}
           onDrop={(e) => onDrop(e, col.status)}
         >
-          <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-sm font-semibold">{col.status}</span>
-            <Badge variant="secondary">{col.items.length}</Badge>
+          <div className="flex items-center justify-between px-3 py-2.5">
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  col.category === "Done"
+                    ? "bg-[hsl(var(--success))]"
+                    : col.category === "In Progress"
+                      ? "bg-[hsl(var(--info))]"
+                      : "bg-muted-foreground/50"
+                }`}
+              />
+              {col.status}
+            </span>
+            <Badge variant="secondary" className="font-mono text-xs">{col.items.length}</Badge>
           </div>
           <div className="grid max-h-[calc(100vh-14rem)] gap-2 overflow-y-auto p-2">
             {col.items.map((i) => (
@@ -100,7 +111,7 @@ export default function Board() {
                   e.dataTransfer.setData("application/x-from-status", i.status);
                   e.dataTransfer.effectAllowed = "move";
                 }}
-                className="cursor-grab rounded-md border bg-card p-2.5 text-sm shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing"
+                className="cursor-grab rounded-lg border bg-card p-2.5 text-sm shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/5 active:cursor-grabbing"
               >
                 <div className="flex items-center gap-1.5">
                   <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />

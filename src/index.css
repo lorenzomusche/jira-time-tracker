@@ -1,67 +1,78 @@
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/space-grotesk";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --background: 250 40% 98.5%;
+    --foreground: 248 32% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 248 32% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.625rem;
+    --popover-foreground: 248 32% 10%;
+    /* indigo-violet brand */
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 262 40% 95%;
+    --secondary-foreground: 262 60% 30%;
+    --muted: 250 20% 95.5%;
+    --muted-foreground: 250 12% 46%;
+    --accent: 262 50% 94%;
+    --accent-foreground: 262 70% 35%;
+    --destructive: 0 80% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 250 25% 90%;
+    --input: 250 25% 88%;
+    --ring: 262 83% 58%;
+    --radius: 0.75rem;
+    /* status colors */
+    --success: 152 70% 36%;
+    --warning: 38 95% 48%;
+    --info: 217 91% 55%;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 262 50% 94%;
+    --sidebar-accent-foreground: 262 70% 35%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 262 83% 58%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --background: 252 35% 6.5%;
+    --foreground: 250 30% 96%;
+    --card: 252 28% 9.5%;
+    --card-foreground: 250 30% 96%;
+    --popover: 252 28% 9%;
+    --popover-foreground: 250 30% 96%;
+    --primary: 262 85% 68%;
+    --primary-foreground: 252 40% 8%;
+    --secondary: 252 22% 16%;
+    --secondary-foreground: 262 60% 85%;
+    --muted: 252 20% 14.5%;
+    --muted-foreground: 250 14% 62%;
+    --accent: 252 25% 18%;
+    --accent-foreground: 262 80% 85%;
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 252 20% 17%;
+    --input: 252 20% 20%;
+    --ring: 262 85% 68%;
+    --success: 152 60% 45%;
+    --warning: 38 90% 55%;
+    --info: 217 85% 62%;
+    --sidebar-background: 252 28% 9%;
+    --sidebar-foreground: 250 30% 96%;
+    --sidebar-primary: 262 85% 68%;
+    --sidebar-primary-foreground: 252 40% 8%;
+    --sidebar-accent: 252 25% 18%;
+    --sidebar-accent-foreground: 262 80% 85%;
+    --sidebar-border: 252 20% 17%;
+    --sidebar-ring: 262 85% 68%;
   }
 }
 
@@ -70,6 +81,68 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
   }
+  ::selection {
+    background: hsl(var(--primary) / 0.25);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.25);
+    border-radius: 8px;
+    border: 2px solid hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply border-b bg-background/70 backdrop-blur-xl backdrop-saturate-150;
+  }
+  .gradient-brand {
+    background: linear-gradient(135deg, hsl(262 83% 58%), hsl(292 75% 55%));
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(262 83% 58%), hsl(292 75% 55%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .card-hover {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10;
+  }
+  .mesh-bg {
+    background:
+      radial-gradient(at 20% 10%, hsl(262 83% 58% / 0.18) 0, transparent 50%),
+      radial-gradient(at 85% 20%, hsl(292 75% 55% / 0.14) 0, transparent 50%),
+      radial-gradient(at 50% 90%, hsl(217 91% 55% / 0.12) 0, transparent 50%),
+      hsl(var(--background));
+  }
+  .dark .mesh-bg {
+    background:
+      radial-gradient(at 20% 10%, hsl(262 83% 58% / 0.22) 0, transparent 55%),
+      radial-gradient(at 85% 20%, hsl(292 75% 55% / 0.16) 0, transparent 55%),
+      radial-gradient(at 50% 90%, hsl(217 91% 55% / 0.14) 0, transparent 55%),
+      hsl(var(--background));
+  }
+  .stat-icon {
+    @apply flex h-9 w-9 items-center justify-center rounded-lg;
+  }
+  .animate-pulse-dot {
+    animation: pulse-dot 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
