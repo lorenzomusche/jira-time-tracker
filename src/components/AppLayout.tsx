@@ -1,8 +1,9 @@
 import { Link, NavLink, useNavigate } from "react-router";
-import { Clock, LayoutDashboard, ListTodo, CalendarDays, KanbanSquare, LogOut, RefreshCw, Search } from "lucide-react";
+import { BarChart3, Clock, LayoutDashboard, ListTodo, CalendarDays, KanbanSquare, LogOut, RefreshCw, Search, Settings as SettingsIcon } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { useAuth } from "@/hooks/useAuth";
 import { useHotkeys } from "@/hooks/useHotkeys";
+import { useTimerAlerts } from "@/hooks/useTimerAlerts";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,11 +24,13 @@ const navItems = [
   { to: "/issues", label: "Issue", icon: ListTodo },
   { to: "/timesheet", label: "Timesheet", icon: CalendarDays },
   { to: "/board", label: "Board", icon: KanbanSquare },
+  { to: "/reports", label: "Report", icon: BarChart3 },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   useHotkeys();
+  useTimerAlerts();
   const navigate = useNavigate();
   const utils = trpc.useUtils();
   const logout = trpc.auth.logout.useMutation({
@@ -99,6 +102,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             >
               <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${sync.isPending ? "animate-spin" : ""}`} />
               Sync
+            </Button>
+            <Button asChild variant="ghost" size="icon" title="Impostazioni">
+              <Link to="/settings">
+                <SettingsIcon className="h-4 w-4" />
+              </Link>
             </Button>
             <ModeToggle />
             <DropdownMenu>

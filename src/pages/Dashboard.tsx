@@ -17,6 +17,7 @@ import { formatSeconds } from "@contracts/time";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuickLog } from "@/components/QuickLog";
+import { GoalRing } from "@/components/GoalRing";
 
 const COLORS = [
   "hsl(var(--primary))",
@@ -31,6 +32,7 @@ const COLORS = [
 
 export default function Dashboard() {
   const stats = trpc.stats.dashboard.useQuery();
+  const settings = trpc.settings.get.useQuery();
 
   if (stats.isLoading) {
     return (
@@ -113,6 +115,23 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {settings.data && (
+        <Card>
+          <CardContent className="flex flex-wrap gap-8 p-4">
+            <GoalRing
+              current={s.todaySeconds}
+              target={settings.data.dailyTargetSeconds}
+              label="Obiettivo di oggi"
+            />
+            <GoalRing
+              current={s.weekSeconds}
+              target={settings.data.weeklyTargetSeconds}
+              label="Obiettivo settimanale"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">

@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { GoalRing } from "@/components/GoalRing";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Trash2 } from "lucide-react";
 
 function startOfWeek(d: Date): Date {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -17,10 +20,13 @@ function startOfWeek(d: Date): Date {
 }
 
 const DAY_NAMES = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
-const DAILY_TARGET = 8 * 3600;
+
 
 export default function Timesheet() {
   const [weekOffset, setWeekOffset] = useState(0);
+  const settings = trpc.settings.get.useQuery();
+  const dailyTarget = settings.data?.dailyTargetSeconds ?? 8 * 3600;
+  const [selected, setSelected] = useState<Set<number>>(new Set());
 
   const weekStart = useMemo(() => {
     const d = startOfWeek(new Date());
@@ -55,6 +61,31 @@ export default function Timesheet() {
   }, [weekStart, logs.data]);
 
   const weekTotal = days.reduce((acc, d) => acc + d.total, 0);
+
+  const del = trpc.worklogs.delete.useMutation();
+  const toggleSelect = (id: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const deleteSelected = async () => {
+    const entries = (logs.data ?? []).filter((w) => selected.has(w.id));
+    if (entries.length === 0) return;
+    if (!window.confirm(`Eliminare ${entries.length} worklog selezionati (anche da Jira)?`)) return;
+    let ok = 0;
+    for (const w of entries) {
+      try {
+        await del.mutateAsync({ issueKey: w.issueKey, jiraWorklogId: w.jiraWorklogId });
+        ok++;
+      } catch { /* continue */ }
+    }
+    toast.success(`${ok}/${entries.length} worklog eliminati`);
+    setSelected(new Set());
+    utils.invalidate();
+  };
 
   /** Export the visible week's worklogs as CSV (native Blob download). */
   const exportCsv = () => {
@@ -151,6 +182,12 @@ export default function Timesheet() {
           Settimana del {weekStart.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" })}
         </h2>
         <div className="flex items-center gap-3">
+          {selected.size > 0 && (
+            <Button variant="destructive" size="sm" onClick={deleteSelected} disabled={del.isPending}>
+              <Trash2 className="mr-1.5 h-4 w-4" />
+              Elimina {selected.size}
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -160,9 +197,16 @@ export default function Timesheet() {
             <Download className="mr-1.5 h-4 w-4" />
             Esporta CSV
           </Button>
-          <div className="text-sm font-semibold">
-            Totale: {formatSeconds(weekTotal)}
-          </div>
+          {settings.data ? (
+            <GoalRing
+              current={weekTotal}
+              target={settings.data.weeklyTargetSeconds}
+              size={44}
+              stroke={5}
+            />
+          ) : (
+            <div className="text-sm font-semibold">Totale: {formatSeconds(weekTotal)}</div>
+          )}
         </div>
       </div>
 
@@ -171,7 +215,7 @@ export default function Timesheet() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {days.map((d, i) => {
-            const pct = Math.min(100, Math.round((d.total / DAILY_TARGET) * 100));
+            const pct = Math.min(100, Math.round((d.total / dailyTarget) * 100));
             const isToday = d.key === new Date().toISOString().slice(0, 10) ||
               d.date.toDateString() === new Date().toDateString();
             return (
@@ -202,7 +246,7 @@ export default function Timesheet() {
                           <CopyPlus className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      <span className={d.total >= DAILY_TARGET ? "text-green-600" : ""}>
+                      <span className={d.total >= dailyTarget ? "text-[hsl(var(--success))]" : ""}>
                         {formatSeconds(d.total)}
                       </span>
                     </span>
@@ -216,11 +260,16 @@ export default function Timesheet() {
                     </p>
                   ) : (
                     d.entries.map((w) => (
-                      <Link
-                        key={w.id}
-                        to={`/issues/${w.issueKey}`}
-                        className="rounded-md border p-2 text-xs transition-colors hover:bg-accent"
-                      >
+                      <div key={w.id} className="flex items-start gap-1.5">
+                        <Checkbox
+                          className="mt-2"
+                          checked={selected.has(w.id)}
+                          onCheckedChange={() => toggleSelect(w.id)}
+                        />
+                        <Link
+                          to={`/issues/${w.issueKey}`}
+                          className="flex-1 rounded-md border p-2 text-xs transition-colors hover:bg-accent"
+                        >
                         <div className="flex justify-between font-medium">
                           <span className="font-mono">{w.issueKey}</span>
                           <span>{formatSeconds(w.timeSpentSeconds)}</span>
@@ -230,7 +279,8 @@ export default function Timesheet() {
                             {w.comment}
                           </div>
                         )}
-                      </Link>
+                        </Link>
+                      </div>
                     ))
                   )}
                 </CardContent>

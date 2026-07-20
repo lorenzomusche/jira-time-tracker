@@ -10,6 +10,8 @@ import Issues from "@/pages/Issues";
 import IssueDetail from "@/pages/IssueDetail";
 import Timesheet from "@/pages/Timesheet";
 import Board from "@/pages/Board";
+import Reports from "@/pages/Reports";
+import Settings from "@/pages/Settings";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthenticated } = useRequireAuth();
@@ -34,6 +36,8 @@ export default function App() {
         <Route path="/issues/:key" element={<Protected><IssueDetail /></Protected>} />
         <Route path="/timesheet" element={<Protected><Timesheet /></Protected>} />
         <Route path="/board" element={<Protected><Board /></Protected>} />
+        <Route path="/reports" element={<Protected><Reports /></Protected>} />
+        <Route path="/settings" element={<Protected><Settings /></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster richColors position="bottom-right" />

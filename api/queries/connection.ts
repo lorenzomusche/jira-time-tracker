@@ -79,6 +79,13 @@ CREATE TABLE IF NOT EXISTS timers (
   updated_at INTEGER NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_timers_user_issue ON timers(user_id, issue_key);
+CREATE TABLE IF NOT EXISTS settings (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  daily_target_seconds INTEGER NOT NULL DEFAULT 28800,
+  weekly_target_seconds INTEGER NOT NULL DEFAULT 144000,
+  timer_alert_minutes INTEGER NOT NULL DEFAULT 120,
+  notify_enabled INTEGER NOT NULL DEFAULT 1
+);
 `;
 
 let instance: ReturnType<typeof createDb> | undefined;

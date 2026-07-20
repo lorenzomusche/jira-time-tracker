@@ -27,6 +27,10 @@ Applicazione web full-stack per **catalogare le issue Jira assegnate** all'utent
 - **Duplica giornata**: dalla timesheet copi tutti i worklog di un giorno su oggi con un click
 - **Fine tracking con timer live**: play / pausa / stop su ogni issue — allo stop il tempo tracciato (arrotondato al minuto) viene pre-caricato nel dialog di consuntivazione. Un solo timer attivo alla volta: avviandone uno gli altri vanno in pausa automaticamente. Badge sempre visibile nell'header
 - **Consuntivazione one-click**: registra tempo con sintassi Jira (`2h 30m`, `1d`, `45m`), modifica ed elimina worklog — tutto sincronizzato su Jira e archiviato in locale
+- **Report & analytics**: intervallo date libero, raggruppamento per giorno/issue/progetto con barre proporzionali, totali e export CSV
+- **Obiettivi ore**: target giornaliero/settimanale configurabile con anelli di progresso in dashboard e timesheet
+- **Alert timer anti-dimenticanza**: notifica browser se un timer supera la soglia configurata
+- **Bulk delete**: selezione multipla ed eliminazione di gruppo dei worklog in timesheet
 - **Dark mode**: tema chiaro/scuro/sistema con toggle nell'header
 - **Export CSV**: la settimana della timesheet si scarica in CSV (compatibile Excel) con un click
 - **Dashboard**: ore oggi / settimana / mese, grafico ore ultimi 14 giorni, ripartizione per progetto, issue aperte
@@ -94,7 +98,7 @@ src/            React: Login, Dashboard, Issues, IssueDetail, Timesheet
 
 ## Test
 
-48 test: parsing/formatting durate, crypto, client Jira (fetch mockato, paginazione JQL, errori) e integrazione end-to-end dei router tRPC su SQLite in-memory (login, sync issue, worklog CRUD, statistiche, logout).
+50 test: parsing/formatting durate, crypto, client Jira (fetch mockato, paginazione JQL, errori) e integrazione end-to-end dei router tRPC su SQLite in-memory (login, sync issue, worklog CRUD, statistiche, logout).
 
 ## Note di sicurezza
 

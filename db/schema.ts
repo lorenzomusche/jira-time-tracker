@@ -130,8 +130,20 @@ export const timers = sqliteTable(
   (t) => [uniqueIndex("uq_timers_user_issue").on(t.userId, t.issueKey)],
 );
 
+export const settings = sqliteTable("settings", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  dailyTargetSeconds: integer("daily_target_seconds").notNull().default(8 * 3600),
+  weeklyTargetSeconds: integer("weekly_target_seconds").notNull().default(40 * 3600),
+  /** Notify when a timer runs longer than this (minutes). 0 = disabled */
+  timerAlertMinutes: integer("timer_alert_minutes").notNull().default(120),
+  notifyEnabled: integer("notify_enabled").notNull().default(1),
+});
+
 export type User = typeof users.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Issue = typeof issues.$inferSelect;
 export type Worklog = typeof worklogs.$inferSelect;
 export type Timer = typeof timers.$inferSelect;
+export type Settings = typeof settings.$inferSelect;

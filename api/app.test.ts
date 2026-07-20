@@ -365,6 +365,74 @@ describe("app router (integration, in-memory SQLite)", () => {
     expect(stats.perProject[0].projectKey).toBe("PRJ");
   });
 
+  it("settings: returns defaults and persists updates", async () => {
+    const caller = router.createCaller(authedCtx);
+    const defaults = await caller.settings.get();
+    expect(defaults.dailyTargetSeconds).toBe(8 * 3600);
+    expect(defaults.weeklyTargetSeconds).toBe(40 * 3600);
+    expect(defaults.timerAlertMinutes).toBe(120);
+
+    const updated = await caller.settings.update({
+      dailyTargetSeconds: 6 * 3600,
+      timerAlertMinutes: 90,
+      notifyEnabled: 0,
+    });
+    expect(updated.dailyTargetSeconds).toBe(6 * 3600);
+    expect(updated.timerAlertMinutes).toBe(90);
+    expect(updated.notifyEnabled).toBe(0);
+
+    const again = await caller.settings.get();
+    expect(again.dailyTargetSeconds).toBe(6 * 3600);
+  });
+
+  it("reports: groups worklogs by day, issue and project", async () => {
+    const caller = router.createCaller(authedCtx);
+    // add a second worklog on OPS-7 (PRJ-1 already has 9000s today)
+    await caller.worklogs.create({
+      issueKey: "OPS-7",
+      timeSpent: "1h 30m",
+      started: new Date().toISOString(),
+      comment: "CI fix",
+    });
+    const from = new Date();
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(from);
+    to.setDate(to.getDate() + 1);
+
+    const byDay = await caller.reports.generate({
+      from: from.toISOString(),
+      to: to.toISOString(),
+      groupBy: "day",
+    });
+    expect(byDay.rows).toHaveLength(1);
+    expect(byDay.totalSeconds).toBe(9000 + 5400);
+    expect(byDay.totalEntries).toBe(2);
+
+    const byIssue = await caller.reports.generate({
+      from: from.toISOString(),
+      to: to.toISOString(),
+      groupBy: "issue",
+    });
+    expect(byIssue.rows).toHaveLength(2);
+    expect(byIssue.rows[0].key).toBe("PRJ-1"); // most seconds first
+    expect(byIssue.rows[0].label).toContain("Implementare login");
+
+    const byProject = await caller.reports.generate({
+      from: from.toISOString(),
+      to: to.toISOString(),
+      groupBy: "project",
+    });
+    expect(byProject.rows.map((r) => r.key).sort()).toEqual(["OPS", "PRJ"]);
+
+    // empty range
+    const empty = await caller.reports.generate({
+      from: "2020-01-01T00:00:00.000Z",
+      to: "2020-01-02T00:00:00.000Z",
+      groupBy: "day",
+    });
+    expect(empty.rows).toHaveLength(0);
+  });
+
   it("deletes a worklog from Jira and locally", async () => {
     const caller = router.createCaller(authedCtx);
     await caller.worklogs.delete({ issueKey: "PRJ-1", jiraWorklogId: "wl-1" });

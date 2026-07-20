@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import {
+  BarChart3,
   CalendarDays,
   KanbanSquare,
+  Settings as SettingsIcon,
   LayoutDashboard,
   ListTodo,
   Moon,
@@ -92,6 +94,12 @@ export function CommandPalette() {
           </CommandItem>
           <CommandItem onSelect={() => go("/board")}>
             <KanbanSquare className="mr-2 h-4 w-4" /> Board
+          </CommandItem>
+          <CommandItem onSelect={() => go("/reports")}>
+            <BarChart3 className="mr-2 h-4 w-4" /> Report
+          </CommandItem>
+          <CommandItem onSelect={() => go("/settings")}>
+            <SettingsIcon className="mr-2 h-4 w-4" /> Impostazioni
           </CommandItem>
         </CommandGroup>
         <CommandGroup heading="Azioni">
